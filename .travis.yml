@@ -1,0 +1,13 @@
+language: c
+compiler:
+    - clang
+    - gcc
+install:
+    - ./ci/get-gcc.sh
+    - ./ci/get-cvs-stimuli.sh
+    - ./ci/gen-cvs-stimuli.sh
+script:
+    - ./ci/run-tests.sh
+    - ./ci/run-cli-tests.sh
+env:
+    - RISCV=riscv
