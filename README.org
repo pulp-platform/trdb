@@ -1,11 +1,23 @@
-* TRDB -- C Model and Decompression Tools
-  The C model accepts a stimuli/trace file and produces the sequence of packages
-  that the RTL model would. An example of how such a trace file looks like can
-  be found in =data/trdb_stimuli=. This is what the RISC-V core sends to the
-  PULP hardware trace debugger each cycle.
+* TRDB -- Library and CLI Tools for RISC-V Processor Tracing
+  This library provides software tooling for decompressing, compressing and
+  disassembling captured execution traces of a RISC-V Core and is compliant with
+  the [[https://github.com/riscv/riscv-trace-spec][RISC-V Processor Trace Specification]]. It is used together with the
+  [[https://github.com/pulp-platform/trace_debugger][hardware trace module]] of the PULP project.
 
-  The C model itself is used by the testbench in =tb/= by employing the DPI
-  (Direct Programming Interface) of SystemVerilog.
+** Features
+   =libtrdb= routines that can be used to
+   + decompress trace packets
+   + disassemble traces
+   + Model a trace encoding source (processor interface to trace packets)
+
+   =trdb= command line tool(s) used to
+   + do the above on a CLI
+
+  The trace source model accepts a stimuli/trace file and produces the sequence
+  of packages that the [[https://github.com/pulp-platform/trace_debugger][PULP RTL]] IP would. An example of how such a trace file
+  looks like can be found in =data/trdb_stimuli=. This is what the RISC-V core
+  sends to the PULP hardware trace debugger each cycle. It is used by the
+  testbench of the pulp hardware tracer in by employing via the DPI.
 
   The =trdb= binary provides functionality to decompress recorded packages and
   to compress stimuli/trace files.
@@ -29,7 +41,7 @@
    C-model, the decompression and disassembly functionality. Run =make docs= to
    build the documentation with doxygen. It will be put under =doc/=.
 
-** Usage of trdb, the trace compression/decompression tool
+** Usage of =trdb=
 *** Compression
     =./trdb --compress TRACE-FILE= to compress the instruction sequence given in
     =TRACE-FILE= to a sequence of packets printed in a human readable format to
@@ -76,7 +88,7 @@
     #+END_SRC
 
 
-** Usage of libtrdb.so
+** Usage of =libtrdb=
    Always first initialize and hold a =trdb_ctx= struct by calling =trdb_new()=,
    which contains the context and state of the trace debugger functions. On
    creation it will use some sane configuration settings.
@@ -100,7 +112,7 @@
    =trdb_free=.
 
 ** Tests
-   There are a few tests which can be run through =make test= or =make check=.
+   There are a few tests which can be run through =make test=.
 
 ** parse-opcodes
    The code in riscv_encoding.h was generated with [[https://github.com/pulp-platform/riscv-opcodes][riscv-opcodes]], a forked
