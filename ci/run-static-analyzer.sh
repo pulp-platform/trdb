@@ -1,3 +1,6 @@
 #!/usr/bin/env
-cd "$TRDB_HOME/trdb"
+set -e
+
+ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+
 "$SCAN_BUILD" make clean all

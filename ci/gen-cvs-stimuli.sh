@@ -1,3 +1,7 @@
 #!/usr/bin/env bash
-cd "$TRDB_HOME/trdb/"
+set -e
+
+ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+
+cd ${ROOT}
 make spike-generate-traces

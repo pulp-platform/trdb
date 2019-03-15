@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
-git clone "$SPIKE_TEST_TRACES_URL" spike-traces
+set -e
 
-mkdir "$TRDB_HOME/trdb/data/cvs"
+ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 
-cp "$TRDB_HOME/spike-traces/"* "$TRDB_HOME/trdb/data/cvs/"
+git clone "$SPIKE_TEST_TRACES_URL" ${ROOT}/spike-traces
+
+mkdir ${ROOT}/data/cvs
+
+cp ${ROOT}/spike-traces/* ${ROOT}/data/cvs/
