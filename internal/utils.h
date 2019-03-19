@@ -148,9 +148,9 @@ void trdb_log(struct trdb_ctx *ctx, int priority, const char *file, int line,
 
 /**
  * Generate a mask with the first @p len bits set. @p len need to be smaller
- * than 64.
+ * or equal to 64.
  */
-#define MASK_FROM(len) ((1ull << len) - 1)
+#define MASK_FROM(len) (len != 64 ? (((uint64_t)1 << len) - 1) : (uint64_t)-1)
 
 /* bit manipulation utility functions */
 
