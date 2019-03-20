@@ -29,10 +29,10 @@ ALL_CFLAGS      = -std=gnu11 -fno-strict-aliasing $(CFLAGS)
 ALL_CFLAGS_DBG  = -std=gnu11 -Wall -Wextra -Wno-missing-field-initializers \
 			-Wno-unused-function -Wno-missing-braces \
 			-O0 -g -fno-strict-aliasing \
-			-fsanitize=address -fno-omit-frame-pointer \
 			-DENABLE_LOGGING -DENABLE_DEBUG $(CFLAGS_DBG)\
-# -fsanitize=undefined \
-# -fsanitize=leak \
+			-fsanitize=address -fno-omit-frame-pointer \
+			-fsanitize=undefined \
+			-fsanitize=leak \
 
 
 QUESTASIM_PATH  = /usr/pack/modelsim-10.5c-kgf/questasim
@@ -213,37 +213,56 @@ TAGS:
 docs: doxyfile $(SRCS) $(MAINS_SRCS)
 	$(DOXYGEN) doxyfile
 
-# patched spike to produce traces
-#
+# patched spike to produce traces (32-bit and 64-bit)
+define spike_template =
+
 # we use sed to cutoff the internal boot sequence of spike. Alternatively we
 # could add this code to the binary but this is easier.
-spike-generate-traces: riscv-tests/benchmarks/build.ok spike
-	mkdir -p riscv-traces
-	for benchmark in riscv-tests/benchmarks/*.riscv; do \
-		./trdb-spike \
-			--ust-trace=riscv-traces/$$(basename $$benchmark).cvs \
-			$$benchmark; \
-		sed -i 2,6d riscv-traces/$$(basename $$benchmark).cvs; \
-		cp $$benchmark riscv-traces/$$(basename $$benchmark); \
+spike-traces-$(1): riscv-tests-$(1)/benchmarks/build.ok spike-$(1)
+	mkdir -p riscv-traces-$(1)
+	for benchmark in riscv-tests-$(1)/benchmarks/*.riscv; do \
+		./trdb-spike-$(1) \
+			--ust-trace=riscv-traces-$(1)/$$$$(basename $$$$benchmark).cvs \
+			$$$$benchmark; \
+		sed -i 2,6d riscv-traces-$(1)/$$$$(basename $$$$benchmark).cvs; \
+		cp $$$$benchmark riscv-traces-$(1)/$$$$(basename $$$$benchmark); \
 	done
 
+spike-$(1): riscv-isa-sim-$(1)/build.ok riscv-fesvr/build.ok
 
-spike: riscv-isa-sim/build.ok riscv-fesvr/build.ok
-
-riscv-isa-sim/build.ok: riscv-fesvr/build.ok
-	rm -rf riscv-isa-sim
-	git clone https://github.com/pulp-platform/riscv-isa-sim
-	cd riscv-isa-sim && \
-		LDFLAGS="-L../riscv-fesvr" ./configure --with-isa=RV32IMC
-	cd riscv-isa-sim && \
+riscv-isa-sim-$(1)/build.ok: riscv-fesvr/build.ok
+	rm -rf riscv-isa-sim-$(1)
+	git clone https://github.com/pulp-platform/riscv-isa-sim riscv-isa-sim-$(1)
+	cd riscv-isa-sim-$(1) && \
+		LDFLAGS="-L../riscv-fesvr" ./configure --with-isa=RV$(1)IMC
+	cd riscv-isa-sim-$(1) && \
 		ln -s ../riscv-fesvr/fesvr . && \
 		$(MAKE) && \
 		touch build.ok
 	cd ..
-	echo "#!/usr/bin/env bash" > trdb-spike
-	echo "LD_LIBRARY_PATH=./riscv-isa-sim:./riscv-fesvr ./riscv-isa-sim/spike \"\$$@\"" \
-		>> trdb-spike
-	chmod u+x trdb-spike
+	echo "#!/usr/bin/env bash" > trdb-spike-$(1)
+	echo "LD_LIBRARY_PATH=./riscv-isa-sim-$(1):./riscv-fesvr ./riscv-isa-sim-$(1)/spike \"\$$$$@\"" \
+		>> trdb-spike-$(1)
+	chmod u+x trdb-spike-$(1)
+
+test-trdb-$(1):
+	echo "#!/usr/bin/env bash" > trdb-spike-$(1)
+	echo "LD_LIBRARY_PATH=./riscv-isa-sim-$(1):./riscv-fesvr ./riscv-isa-sim-$(1)/spike \"\$$$$@\"" \
+		>> trdb-spike-$(1)
+	chmod u+x trdb-spike-$(1)
+
+# riscv-benchmark-tests
+# have your $RISCV point to your compiler
+riscv-tests-$(1)/benchmarks/build.ok:
+	rm -rf riscv-tests-$(1)
+	git clone https://github.com/riscv/riscv-tests/ --recursive riscv-tests-$(1)
+	cd riscv-tests-$(1)/benchmarks && XLEN=$(1) $(MAKE) && touch build.ok
+
+endef
+
+
+$(eval $(call spike_template,32))
+$(eval $(call spike_template,64))
 
 
 riscv-fesvr/build.ok:
@@ -251,12 +270,6 @@ riscv-fesvr/build.ok:
 	git clone https://github.com/riscv/riscv-fesvr.git riscv-fesvr
 	+cd riscv-fesvr && ./configure && $(MAKE) && touch build.ok
 
-# riscv-benchmark-tests
-# have your $RISCV point to your compiler
-riscv-tests/benchmarks/build.ok:
-	rm -rf riscv-tests
-	git clone https://github.com/riscv/riscv-tests/ --recursive
-	cd riscv-tests/benchmarks && XLEN=32 $(MAKE) && touch build.ok
 # cleanup
 .PHONY: clean
 clean:
