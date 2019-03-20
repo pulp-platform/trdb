@@ -318,11 +318,11 @@ void trdb_disassemble_block(size_t len, bfd_byte *data,
  * Disassemble the given instr with the pretended address and disassembler_unit
  * and print it calling fprintf_func.
  *
- * @param instr the raw instruction value up to 32 bits
+ * @param instr the raw instruction value up to 64 bits
  * @param addr the address where the instruction is located at
  * @param dunit disassembly context
  */
-void trdb_disassemble_single_instruction(uint32_t instr, uint32_t addr,
+void trdb_disassemble_single_instruction(insn_t instr, addr_t addr,
                                          struct disassembler_unit *dunit);
 
 /**
@@ -334,7 +334,7 @@ void trdb_disassemble_single_instruction(uint32_t instr, uint32_t addr,
  * @param instr the raw instruction value up to 32 bits
  * @param addr the address where the instruction is located at
  */
-void trdb_disassemble_single_instruction_slow(uint32_t instr, uint32_t addr);
+void trdb_disassemble_single_instruction_slow(insn_t instr, addr_t addr);
 
 /**
  * Disassemble the given instruction, indicated by its address @p addr and the

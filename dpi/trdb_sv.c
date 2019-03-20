@@ -104,7 +104,7 @@ void trdb_sv_feed_trace(svLogic ivalid, svLogic iexception, svLogic interrupt,
                                 .cause      = cause->aval,
                                 .tval       = tval->aval,
                                 .priv       = priv->aval,
-                                .iaddr      = iaddr->aval,
+                                .iaddr      = iaddr->aval, /* FIXME: bad size */
                                 .instr      = instr->aval,
                                 .compressed = compressed};
 

@@ -25,6 +25,7 @@
  */
 #include <stdint.h>
 #include <stdbool.h>
+#include "trace_debugger.h"
 
 /* define functions which help figure out what function we are dealing with */
 #define DECLARE_INSN(code, match, mask)                                        \
@@ -85,7 +86,7 @@ static bool is_ret_instr(long instr)
 
 enum trdb_ras { none = 0, ret = 1, call = 2, coret = 3 };
 
-static enum trdb_ras is_jalr_funcall(uint32_t instr)
+static enum trdb_ras is_jalr_funcall(insn_t instr)
 {
     /* According the the calling convention outlined in the risc-v spec we are
      * dealing with a function call if instr == jalr and rd=x1/x5=link.
@@ -118,7 +119,7 @@ static enum trdb_ras is_jalr_funcall(uint32_t instr)
         return none;
 }
 
-static enum trdb_ras is_c_jalr_funcall(uint32_t instr)
+static enum trdb_ras is_c_jalr_funcall(insn_t instr)
 {
     /* C.JALR expands to jalr x1=X_RA, rs1, 0 */
     bool is_c_jalr  = is_really_c_jalr_instr(instr);
@@ -134,7 +135,7 @@ static enum trdb_ras is_c_jalr_funcall(uint32_t instr)
         return call;
 }
 
-static enum trdb_ras is_jal_funcall(uint32_t instr)
+static enum trdb_ras is_jal_funcall(insn_t instr)
 {
     /* if jal with rd=x1/x5 then we know it's a function call */
     bool is_jal     = is_jal_instr(instr);
@@ -146,7 +147,7 @@ static enum trdb_ras is_jal_funcall(uint32_t instr)
         return none;
 }
 
-static enum trdb_ras is_c_jal_funcall(uint32_t instr)
+static enum trdb_ras is_c_jal_funcall(insn_t instr)
 {
     /* C.JAL expands to jal x1, offset[11:1] */
     bool is_c_jal = is_c_jal_instr(instr);
@@ -156,7 +157,7 @@ static enum trdb_ras is_c_jal_funcall(uint32_t instr)
         return none;
 }
 
-static enum trdb_ras get_instr_ras_type(uint32_t instr)
+static enum trdb_ras get_instr_ras_type(insn_t instr)
 {
     enum trdb_ras type = none;
     if (is_jalr_instr(instr)) {
@@ -166,7 +167,9 @@ static enum trdb_ras get_instr_ras_type(uint32_t instr)
     } else if (is_really_c_jalr_instr(instr)) {
         type = is_c_jalr_funcall(instr);
     } else if (is_c_jal_instr(instr)) {
-        type = call; /* C.JAL expands to jal x1, offset [11:1] */
+#ifndef TRDB_ARCH64
+        type = call; /* C.JAL expands to jal x1, offset [11:1], RV32 only */
+#endif
     } else if (is_c_ret_instr(instr)) {
         type = ret;
     }

@@ -9,6 +9,9 @@
  * decompression routine
  */
 struct trdb_config {
+    /* addressing mode */
+    bool arch64;
+
     /* TODO: Unused, inspect full-address, iaddress-lsb-p, implicit-except,
      * set-trace
      */
@@ -56,7 +59,7 @@ struct trdb_stats {
     size_t abs_packets;
     size_t bmap_full_packets;
     size_t bmap_full_addr_packets;
-    uint32_t sext_bits[32];
+    uint32_t sext_bits[64];
 };
 
 struct trdb_ctx {

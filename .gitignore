@@ -1,2 +1,12 @@
 *.o
 *.d
+riscv-fesvr
+riscv-isa-sim-32
+riscv-isa-sim-64
+riscv-tests-32
+riscv-tests-64
+riscv-traces-32
+riscv-traces-64
+compile_commands.json
+trdb-spike-32
+trdb-spike-64

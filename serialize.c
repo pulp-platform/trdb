@@ -466,19 +466,19 @@ int trdb_stimuli_to_trace_list(struct trdb_ctx *c, const char *path,
     int exception  = 0;
     int interrupt  = 0;
     uint32_t cause = 0;
-    uint32_t tval  = 0;
+    addr_t tval    = 0;
     uint32_t priv  = 0;
-    uint32_t iaddr = 0;
-    uint32_t instr = 0;
+    addr_t iaddr   = 0;
+    insn_t instr   = 0;
     int compressed = 0;
 
-    while (
-        (ret = fscanf(fp,
-                      "valid= %d exception= %d interrupt= %d cause= %" SCNx32
-                      " tval= %" SCNx32 " priv= %" SCNx32
-                      " compressed= %d addr= %" SCNx32 " instr= %" SCNx32 " \n",
-                      &valid, &exception, &interrupt, &cause, &tval, &priv,
-                      &compressed, &iaddr, &instr)) != EOF) {
+    while ((ret = fscanf(fp,
+                         "valid= %d exception= %d interrupt= %d cause= %" SCNx32
+                         " tval= %" SCNxADDR " priv= %" SCNx32
+                         " compressed= %d addr= %" SCNxADDR " instr= %" SCNxINSN
+                         " \n",
+                         &valid, &exception, &interrupt, &cause, &tval, &priv,
+                         &compressed, &iaddr, &instr)) != EOF) {
         // TODO: make this configurable so that we don't have to store so
         // much data
         /* if (!valid) { */
@@ -547,10 +547,10 @@ int trdb_stimuli_to_trace(struct trdb_ctx *c, const char *path,
     int exception  = 0;
     int interrupt  = 0;
     uint32_t cause = 0;
-    uint32_t tval  = 0;
+    addr_t tval    = 0;
     uint32_t priv  = 0;
-    uint32_t iaddr = 0;
-    uint32_t instr = 0;
+    addr_t iaddr   = 0;
+    insn_t instr   = 0;
     int compressed = 0;
 
     size_t size = 128;
@@ -560,13 +560,13 @@ int trdb_stimuli_to_trace(struct trdb_ctx *c, const char *path,
         goto fail;
     }
 
-    while (
-        (ret = fscanf(fp,
-                      "valid= %d exception= %d interrupt= %d cause= %" SCNx32
-                      " tval= %" SCNx32 " priv= %" SCNx32
-                      " compressed= %d addr= %" SCNx32 " instr= %" SCNx32 " \n",
-                      &valid, &exception, &interrupt, &cause, &tval, &priv,
-                      &compressed, &iaddr, &instr)) != EOF) {
+    while ((ret = fscanf(fp,
+                         "valid= %d exception= %d interrupt= %d cause= %" SCNx32
+                         " tval= %" SCNxADDR " priv= %" SCNx32
+                         " compressed= %d addr= %" SCNxADDR " instr= %" SCNxINSN
+                         " \n",
+                         &valid, &exception, &interrupt, &cause, &tval, &priv,
+                         &compressed, &iaddr, &instr)) != EOF) {
         // TODO: make this configurable so that we don't have to store so much
         // data
         /* if (!valid) { */
@@ -636,10 +636,10 @@ int trdb_cvs_to_trace_list(struct trdb_ctx *c, const char *path,
     int exception  = 0;
     int interrupt  = 0;
     uint32_t cause = 0;
-    uint32_t tval  = 0;
+    addr_t tval    = 0;
     uint32_t priv  = 0;
-    uint32_t iaddr = 0;
-    uint32_t instr = 0;
+    addr_t iaddr   = 0;
+    insn_t instr   = 0;
 
     char *line = NULL;
     size_t len = 0;
@@ -682,11 +682,11 @@ int trdb_cvs_to_trace_list(struct trdb_ctx *c, const char *path,
                 sample->valid = valid;
                 break;
             case 6:
-                sscanf(tok, "%" SCNx32 "", &iaddr);
+                sscanf(tok, "%" SCNxADDR "", &iaddr);
                 sample->iaddr = iaddr;
                 break;
             case 5:
-                sscanf(tok, "%" SCNx32 "", &instr);
+                sscanf(tok, "%" SCNxINSN "", &instr);
                 sample->instr      = instr;
                 sample->compressed = ((instr & 3) != 3);
                 break;
@@ -703,7 +703,7 @@ int trdb_cvs_to_trace_list(struct trdb_ctx *c, const char *path,
                 sample->cause = cause;
                 break;
             case 1:
-                sscanf(tok, "%" SCNx32 "", &tval);
+                sscanf(tok, "%" SCNxADDR "", &tval);
                 sample->tval = tval;
                 break;
             case 0:

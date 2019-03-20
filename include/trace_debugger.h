@@ -37,6 +37,24 @@ extern "C" {
 #include <stdio.h>
 #include <ctype.h>
 #include <sys/queue.h>
+
+/* instruction and address types */
+#ifdef TRDB_ARCH64
+typedef uint64_t insn_t; /* _t violates posix, but no one seems to care anyway*/
+typedef uint64_t addr_t;
+#    define PRIxINSN PRIx64
+#    define PRIxADDR PRIx64
+#    define SCNxINSN SCNx64
+#    define SCNxADDR SCNx64
+#else
+typedef uint32_t insn_t;
+typedef uint32_t addr_t;
+#    define PRIxINSN PRIx32
+#    define PRIxADDR PRIx32
+#    define SCNxINSN SCNx32
+#    define SCNxADDR SCNx32
+#endif
+
 /* fix nameconflict with basename in libiberty and libgen */
 #define HAVE_DECL_BASENAME 1
 #include "bfd.h"
@@ -50,10 +68,17 @@ extern "C" {
 /* given header */
 #define FORMATLEN 2
 #define BRANCHLEN 5
-#define XLEN 32
 #define CAUSELEN 5
 #define PRIVLEN 3
-#define ILEN 32
+
+#ifdef TRDB_ARCH64
+#    define XLEN 64
+#    define ILEN 64
+#else
+#    define XLEN 32
+#    define ILEN 32
+#endif
+
 #define CONTEXTLEN 32
 
 /* timer */
@@ -76,10 +101,10 @@ struct tr_instr {
     bool exception;             /**< instruction trapped */
     bool interrupt;             /**< exception caused by interrupt */
     uint32_t cause : CAUSELEN;  /**< exception cause */
-    uint32_t tval : XLEN;       /**< not used in PULP, trap value */
+    addr_t tval : XLEN;         /**< not used in PULP, trap value */
     uint32_t priv : PRIVLEN;    /**< privilege mode */
-    uint32_t iaddr : XLEN;      /**< instruction address */
-    uint32_t instr : ILEN;      /**< raw instruction value */
+    addr_t iaddr : XLEN;        /**< instruction address */
+    insn_t instr : ILEN;        /**< raw instruction value */
     bool compressed;            /**< instruction was originally compressed */
     TAILQ_ENTRY(tr_instr) list; /**< anchor for tail queue/linked list */
 };
@@ -142,10 +167,10 @@ struct tr_packet {
      * that won't be reorcded into the branch map
      */
     bool branch;                 /**< special case for F_SYNC packets */
-    uint32_t address : XLEN;     /**< address of the instruction */
+    addr_t address : XLEN;       /**< address of the instruction */
     uint32_t ecause : CAUSELEN;  /**< exception cause */
     bool interrupt;              /**< exception through interrupt */
-    uint32_t tval : XLEN;        /**< not used in PULP, trap information */
+    addr_t tval : XLEN;          /**< not used in PULP, trap information */
     TAILQ_ENTRY(tr_packet) list; /**< anchor for tail queue/linked list */
 };
 
@@ -648,7 +673,7 @@ void trdb_free_instr_list(struct trdb_instr_head *instr_list);
  *     uint32_t format : 2;   // 00
  *     uint32_t branches : 5;
  *     uint32_t branch_map; //TODO: fix to 31 bits
- *     uint32_t address;
+ *     addr_t address;
  *
  * 2 + 5 + (1 to 31) + (1 to 32) = 9 to 70
  *
@@ -656,13 +681,13 @@ void trdb_free_instr_list(struct trdb_instr_head *instr_list);
  *     uint32_t format : 2;   // 01
  *     uint32_t branches : 5;
  *     uint32_t branch_map;
- *     uint32_t address;
+ *     addr_t address;
  * };
  * 2 + 5 + (1 to 31) + (1 to 32) = 9 to 70
  *
  * struct packet2 {
  *     uint32_t format : 2;
- *     uint32_t address;
+ *     addr_t address;
  * };
  * 2 + (1 to 32) = 3 to 34
  *
@@ -672,7 +697,7 @@ void trdb_free_instr_list(struct trdb_instr_head *instr_list);
  *     uint32_t context;
  *     uint32_t privilege : PRIVLEN;
  *     bool branch : 1;
- *     uint32_t address : XLEN;
+ *     addr_t address : XLEN;
  *     uint32_t ecause : CAUSELEN;
  *     bool interrupt : 1;
  *     uint32_t tval : XLEN;

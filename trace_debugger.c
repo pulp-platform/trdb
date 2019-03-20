@@ -54,6 +54,9 @@ struct filter_state;
  * decompression routine
  */
 struct trdb_config {
+    /* addressing mode */
+    bool arch64;
+
     /* TODO: Unused, inspect iaddress-lsb-p, implicit-except,
      * set-trace
      */
@@ -139,7 +142,7 @@ struct trdb_compress {
     struct trdb_state nextc;
     struct branch_map_state branch_map;
     struct filter_state filter;
-    uint32_t last_iaddr; /* TODO: make this work with 64 bit */
+    addr_t last_iaddr; /* TODO: make this work with 64 bit */
 };
 
 /* Current state of the cpu during decompression. Allows one to precisely emit a
@@ -153,7 +156,7 @@ struct trdb_compress {
  */
 
 /* stack vector for return addresses */
-kvec_nt(trdb_stack, uint32_t);
+kvec_nt(trdb_stack, addr_t);
 
 struct trdb_decompress {
     /* TODO: hw loop addresses handling*/
@@ -162,7 +165,7 @@ struct trdb_decompress {
     /* record current privilege level */
     uint32_t privilege : PRIVLEN;
     /* needed for address compression */
-    uint32_t last_packet_addr;
+    addr_t last_packet_addr;
     struct branch_map_state branch_map;
 };
 
@@ -183,7 +186,7 @@ struct trdb_stats {
     size_t abs_packets;
     size_t bmap_full_packets;
     size_t bmap_full_addr_packets;
-    uint32_t sext_bits[32];
+    uint32_t sext_bits[64];
 };
 
 /* Library context, needs to be passed to most function calls.
@@ -348,6 +351,7 @@ void trdb_free(struct trdb_ctx *ctx)
     if (!ctx)
         return;
     info(ctx, "context %p released\n", ctx);
+
     free(ctx->dis_instr);
     free(ctx->cmp);
     if (ctx->dec)
@@ -465,8 +469,9 @@ void trdb_get_packet_stats(struct trdb_ctx *ctx,
     stats->bmap_full_addr_packets = rstats->bmap_full_addr_packets;
 }
 
-static bool is_branch(uint32_t instr)
+static bool is_branch(insn_t instr)
 {
+    assert((SHR(instr, 32) & 0xffffffff) == 0);
     bool is_riscv_branch = is_beq_instr(instr) || is_bne_instr(instr) ||
                            is_blt_instr(instr) || is_bge_instr(instr) ||
                            is_bltu_instr(instr) || is_bgeu_instr(instr);
@@ -476,8 +481,8 @@ static bool is_branch(uint32_t instr)
     return is_riscv_branch || is_pulp_branch || is_riscv_compressed_branch;
 }
 
-static bool branch_taken(bool before_compressed, uint32_t addr_before,
-                         uint32_t addr_after)
+static bool branch_taken(bool before_compressed, addr_t addr_before,
+                         addr_t addr_after)
 {
     /* TODO: this definitely doens't work for 64 bit instructions */
     /* since we have already decompressed instructions, but still compressed
@@ -512,8 +517,10 @@ uint32_t branch_map_len(uint32_t branches)
  * entries. For plain RISC-V I this is just the jalr instruction. For the PULP
  * extensions, the hardware loop instruction have to be considered too.
  */
-static bool is_unpred_discontinuity(uint32_t instr, bool implicit_ret)
+static bool is_unpred_discontinuity(insn_t instr, bool implicit_ret)
 {
+    assert((SHR(instr, 32) & 0xffffffff) == 0);
+
     bool jump = is_jalr_instr(instr) || is_really_c_jalr_instr(instr) ||
                 is_really_c_jr_instr(instr);
     bool exception_ret =
@@ -528,7 +535,7 @@ static bool is_unpred_discontinuity(uint32_t instr, bool implicit_ret)
 }
 
 /* Just crash and error if we hit one of those */
-static bool is_unsupported(uint32_t instr)
+static bool is_unsupported(addr_t instr)
 {
     return is_lp_setup_instr(instr) || is_lp_counti_instr(instr) ||
            is_lp_count_instr(instr) || is_lp_endi_instr(instr) ||
@@ -539,12 +546,19 @@ static bool is_unsupported(uint32_t instr)
  * address into the packet. We choose the one which has the least amount of
  * meaningfull bits, i.e. the bits that can't be inferred by sign-extension.
  */
-static bool differential_addr(int *lead, uint32_t absolute,
-                              uint32_t differential)
+static bool differential_addr(int *lead, addr_t absolute, addr_t differential)
 {
-    int abs  = sign_extendable_bits(absolute);
-    int diff = sign_extendable_bits(differential);
+    int abs  = 0;
+    int diff = 0;
 
+    /* TODO: a runtime switch would probably be better */
+#ifdef TRDB_ARCH64
+    abs  = sign_extendable_bits64(absolute);
+    diff = sign_extendable_bits64(differential);
+#else
+    abs  = sign_extendable_bits(absolute);
+    diff = sign_extendable_bits(differential);
+#endif
     // /* on tie we probe which one would be better */
     // if ((abs == 32) && (diff == 32)) {
     //     if ((abs & 1) == last) {
@@ -595,8 +609,8 @@ static unsigned quantize_clz(unsigned x)
 }
 
 /* Does the same as differential_addr() but only considers byte boundaries */
-static bool pulp_differential_addr(int *lead, uint32_t absolute,
-                                   uint32_t differential)
+static bool pulp_differential_addr(int *lead, addr_t absolute,
+                                   addr_t differential)
 {
     unsigned abs  = sign_extendable_bits(absolute);
     unsigned diff = sign_extendable_bits(differential);
@@ -677,7 +691,7 @@ static int emit_branch_map_flush_packet(struct trdb_ctx *ctx,
                                         struct tr_packet *tr,
                                         struct branch_map_state *branch_map,
                                         struct tr_instr *tc_instr,
-                                        uint32_t last_iaddr, bool full_address,
+                                        addr_t last_iaddr, bool full_address,
                                         bool is_u_discontinuity)
 {
     if (!ctx || !tr || !branch_map || !tc_instr)
@@ -695,19 +709,19 @@ static int emit_branch_map_flush_packet(struct trdb_ctx *ctx,
             tr->length  = FORMATLEN + XLEN;
         } else {
             /* always differential in F_ADDR_ONLY*/
-            uint32_t diff = last_iaddr - tc_instr->iaddr;
-            uint32_t lead = ctx->config.use_pulp_sext
-                                ? quantize_clz(sign_extendable_bits(diff))
-                                : sign_extendable_bits(diff);
+            addr_t diff = last_iaddr - tc_instr->iaddr;
+            addr_t lead = ctx->config.use_pulp_sext
+                              ? quantize_clz(sign_extendable_bits(diff))
+                              : sign_extendable_bits(diff);
 
-            uint32_t keep = XLEN - lead + 1;
+            int keep = XLEN - lead + 1;
             /* should only be relevant for serialization */
             /* tr->address = MASK_FROM(keep) & diff; */
             tr->address = diff;
             tr->length  = FORMATLEN + keep;
             /* record distribution */
             stats->sext_bits[keep - 1]++;
-            if (tr->address == 0 || tr->address == (uint32_t)-1)
+            if (tr->address == 0 || tr->address == (addr_t)-1)
                 stats->zo_addresses++;
         }
         stats->addr_only_packets++;
@@ -744,10 +758,10 @@ static int emit_branch_map_flush_packet(struct trdb_ctx *ctx,
              * the difference address or the absolute address, whichever has
              * more bits which can be inferred by signextension.
              */
-            uint32_t diff = last_iaddr - tc_instr->iaddr;
-            uint32_t full = tc_instr->iaddr;
-            uint32_t keep = 0;
-            int lead      = 0;
+            addr_t diff = last_iaddr - tc_instr->iaddr;
+            addr_t full = tc_instr->iaddr;
+            int keep    = 0;
+            int lead    = 0;
             bool use_differential =
                 ctx->config.use_pulp_sext
                     ? pulp_differential_addr(&lead, full, diff)
@@ -769,9 +783,10 @@ static int emit_branch_map_flush_packet(struct trdb_ctx *ctx,
                 stats->sext_bits[keep - 1]++;
             }
 
-            if (tr->address == 0 || tr->address == (uint32_t)-1)
+            if (tr->address == 0 || tr->address == (addr_t)-1)
                 stats->zo_addresses++;
-            uint32_t sext = sign_extendable_bits64(
+            /* TODO: broke for 64-bit */
+            unsigned sext = sign_extendable_bits64(
                 ((uint64_t)tr->address << XLEN) |
                 ((uint64_t)branch_map->bits
                  << (XLEN - branch_map_len(branch_map->cnt))));
@@ -825,7 +840,7 @@ static void emit_full_branch_map(struct trdb_ctx *ctx, struct tr_packet *tr,
     tr->branches   = 0;
     tr->branch_map = branch_map->bits;
     /* No address needed */
-    uint32_t sext = sign_extendable_bits(branch_map->bits << 1);
+    int sext = sign_extendable_bits(branch_map->bits << 1);
     if (sext > 31)
         sext = 31;
     if (ctx->config.compress_full_branch_map)
@@ -886,7 +901,7 @@ int trdb_compress_trace_step(struct trdb_ctx *ctx, struct tr_packet *packet,
     /* last address we emitted in packet, needed to compute differential
      * addresses
      */
-    uint32_t *last_iaddr = &ctx->cmp->last_iaddr;
+    addr_t *last_iaddr = &ctx->cmp->last_iaddr;
 
     /* TODO: clean this up, proper initial state per round required */
     thisc->emitted_exception_sync = false;
@@ -909,8 +924,8 @@ int trdb_compress_trace_step(struct trdb_ctx *ctx, struct tr_packet *packet,
 
     if (is_unsupported(tc_instr->instr)) {
         err(ctx,
-            "Instruction is not supported for compression: 0x%" PRIx32
-            " at addr: 0x%" PRIx32 "\n",
+            "Instruction is not supported for compression: 0x%" PRIxINSN
+            " at addr: 0x%" PRIxADDR "\n",
             tc_instr->instr, tc_instr->iaddr);
         status = -trdb_bad_instr;
         goto fail;
@@ -1147,8 +1162,8 @@ int trdb_pulp_model_step(struct trdb_ctx *ctx, struct tr_instr *instr,
 }
 
 /* try to update the return address stack*/
-static int update_ras(struct trdb_ctx *c, uint32_t instr, uint32_t addr,
-                      struct trdb_stack *stack, uint32_t *ret_addr)
+static int update_ras(struct trdb_ctx *c, addr_t instr, addr_t addr,
+                      struct trdb_stack *stack, addr_t *ret_addr)
 {
     if (!stack)
         return -trdb_invalid;
@@ -1164,20 +1179,21 @@ static int update_ras(struct trdb_ctx *c, uint32_t instr, uint32_t addr,
         if (kv_size(*stack) == 0)
             return -trdb_bad_ras;
         *ret_addr = kv_pop(*stack);
-        dbg(c, "return to: %" PRIx32 "\n", *ret_addr);
+        dbg(c, "return to: %" PRIxADDR "\n", *ret_addr);
         return ret;
 
     case coret:
-        dbg(c, "coret call/ret: %" PRIx32 "\n", addr);
+        dbg(c, "coret call/ret: %" PRIxADDR "\n", addr + (compressed ? 2 : 4));
         if (kv_size(*stack) == 0)
             return -trdb_bad_ras;
         *ret_addr = kv_pop(*stack);
-        kv_push(uint32_t, *stack, addr + (compressed ? 2 : 4));
+        kv_push(addr_t, *stack, addr + (compressed ? 2 : 4));
         return coret;
 
     case call:
-        dbg(c, "pushing to stack: %" PRIx32 "\n", addr);
-        kv_push(uint32_t, *stack, addr + (compressed ? 2 : 4));
+        dbg(c, "pushing to stack: %" PRIxADDR "\n",
+            addr + (compressed ? 2 : 4));
+        kv_push(addr_t, *stack, addr + (compressed ? 2 : 4));
         return call;
     }
     return none;
@@ -1230,7 +1246,7 @@ static int disassemble_at_pc(struct trdb_ctx *c, bfd_vma pc,
 
     struct disassemble_info *dinfo = dunit->dinfo;
     /* Important to set for internal calls to fprintf */
-    c->dis_instr  = instr;
+    /* c->dis_instr  = instr; */
     dinfo->stream = c;
 
     /* print instr address */
@@ -1461,7 +1477,7 @@ int trdb_decompress_trace(struct trdb_ctx *c, bfd *abfd,
              * address field
              * TODO: edgecase where we sign extend from msb of branchmap
              */
-            uint32_t absolute_addr = packet->address;
+            addr_t absolute_addr = packet->address;
 
             if (dec_ctx->branch_map.cnt > 0)
                 dec_ctx->last_packet_addr = absolute_addr;
@@ -1502,7 +1518,7 @@ int trdb_decompress_trace(struct trdb_ctx *c, bfd *abfd,
                     hit_address = true;
 
                 /* handle decoding RAS */
-                uint32_t ret_addr            = 0;
+                addr_t ret_addr              = 0;
                 enum trdb_ras instr_ras_type = update_ras(
                     c, dis_instr->instr, dis_instr->iaddr, ras, &ret_addr);
                 if (instr_ras_type < 0) {
@@ -1546,7 +1562,7 @@ int trdb_decompress_trace(struct trdb_ctx *c, bfd *abfd,
                      * flush + discontinuity packet.
                      */
                     if (implicit_ret && instr_ras_type == ret) {
-                        dbg(c, "returning with stack value %" PRIx32 "\n",
+                        dbg(c, "returning with stack value %" PRIxADDR "\n",
                             ret_addr);
                         pc = ret_addr;
                         break;
@@ -1638,12 +1654,11 @@ int trdb_decompress_trace(struct trdb_ctx *c, bfd *abfd,
              */
             bool hit_discontinuity = dec_ctx->branch_map.full;
 
-            uint32_t absolute_addr =
-                dec_ctx->last_packet_addr - packet->address;
+            addr_t absolute_addr = dec_ctx->last_packet_addr - packet->address;
 
             dbg(c,
-                "F_BRANCH_DIFF resolved address:%" PRIx32 " from %" PRIx32
-                " - %" PRIx32 "\n",
+                "F_BRANCH_DIFF resolved address:%" PRIxADDR " from %" PRIxADDR
+                " - %" PRIxADDR "\n",
                 absolute_addr, dec_ctx->last_packet_addr, packet->address);
 
             /* Remember last packet address to be able to compute differential
@@ -1690,7 +1705,7 @@ int trdb_decompress_trace(struct trdb_ctx *c, bfd *abfd,
                     hit_address = true;
 
                 /* handle decoding RAS */
-                uint32_t ret_addr            = 0;
+                addr_t ret_addr              = 0;
                 enum trdb_ras instr_ras_type = update_ras(
                     c, dis_instr->instr, dis_instr->iaddr, ras, &ret_addr);
                 if (instr_ras_type < 0) {
@@ -1735,7 +1750,7 @@ int trdb_decompress_trace(struct trdb_ctx *c, bfd *abfd,
                      * flush + discontinuity packet.
                      */
                     if (implicit_ret && instr_ras_type == ret) {
-                        dbg(c, "returning with stack value %" PRIx32 "\n",
+                        dbg(c, "returning with stack value %" PRIxADDR "\n",
                             ret_addr);
                         pc = ret_addr;
                         break;
@@ -1923,7 +1938,7 @@ int trdb_decompress_trace(struct trdb_ctx *c, bfd *abfd,
             bool hit_address       = false;
             bool hit_discontinuity = false;
 
-            uint32_t absolute_addr;
+            addr_t absolute_addr = 0;
             if (full_address) {
                 absolute_addr = packet->address;
             } else {
@@ -1932,8 +1947,8 @@ int trdb_decompress_trace(struct trdb_ctx *c, bfd *abfd,
             }
 
             dbg(c,
-                "F_ADDR_ONLY resolved address:%" PRIx32 " from %" PRIx32
-                " - %" PRIx32 "\n",
+                "F_ADDR_ONLY resolved address:%" PRIxADDR " from %" PRIxADDR
+                " - %" PRIxADDR "\n",
                 absolute_addr, dec_ctx->last_packet_addr, packet->address);
 
             /* Remember last packet address to be able to compute differential
@@ -1970,7 +1985,7 @@ int trdb_decompress_trace(struct trdb_ctx *c, bfd *abfd,
                     hit_address = true;
 
                 /* handle decoding RAS */
-                uint32_t ret_addr            = 0;
+                addr_t ret_addr              = 0;
                 enum trdb_ras instr_ras_type = update_ras(
                     c, dis_instr->instr, dis_instr->iaddr, ras, &ret_addr);
                 if (instr_ras_type < 0) {
@@ -2001,13 +2016,14 @@ int trdb_decompress_trace(struct trdb_ctx *c, bfd *abfd,
                         break;
                     }
                     dbg(c, "detected mret, uret or sret\n");
+
                     /* fall through */
                 case dis_jsr: /* There is not real difference ... */
 
                     /* fall through */
                 case dis_branch: /* ... between those two */
                     if (implicit_ret && instr_ras_type == ret) {
-                        dbg(c, "returning with stack value %" PRIx32 "\n",
+                        dbg(c, "returning with stack value %" PRIxADDR "\n",
                             ret_addr);
                         pc = ret_addr;
                         break;
@@ -2039,6 +2055,7 @@ int trdb_decompress_trace(struct trdb_ctx *c, bfd *abfd,
             }
         }
     }
+    free_section_for_debugging(&dinfo);
     return status;
 
 fail:
@@ -2136,13 +2153,13 @@ void trdb_log_packet(struct trdb_ctx *c, const struct tr_packet *packet)
 
             dbg(c, "    branches  : %" PRIu32 "\n", packet->branches);
             dbg(c, "    branch_map: 0x%" PRIx32 "\n", packet->branch_map);
-            dbg(c, "    address   : 0x%" PRIx32 "\n", packet->address);
+            dbg(c, "    address   : 0x%" PRIxADDR "\n", packet->address);
             /* TODO: that special full branch map behaviour */
             break;
 
         case F_ADDR_ONLY:
             dbg(c, "PACKET 2: F_ADDR_ONLY\n");
-            dbg(c, "    address   : 0x%" PRIx32 "\n", packet->address);
+            dbg(c, "    address   : 0x%" PRIxADDR "\n", packet->address);
             break;
         case F_SYNC:
             dbg(c, "PACKET 3: F_SYNC\n");
@@ -2160,14 +2177,14 @@ void trdb_log_packet(struct trdb_ctx *c, const struct tr_packet *packet)
                 return;
 
             dbg(c, "    branch    : %s\n", packet->branch ? "true" : "false");
-            dbg(c, "    address   : 0x%" PRIx32 "\n", packet->address);
+            dbg(c, "    address   : 0x%" PRIxADDR "\n", packet->address);
             if (packet->subformat == SF_START)
                 return;
 
             dbg(c, "    ecause    : 0x%" PRIx32 "\n", packet->ecause);
             dbg(c, "    interrupt : %s\n",
                 packet->interrupt ? "true" : "false");
-            dbg(c, "    tval      : 0x%" PRIx32 "\n", packet->tval);
+            dbg(c, "    tval      : 0x%" PRIxADDR "\n", packet->tval);
             /* SF_EXCEPTION */
         }
         break;
@@ -2206,12 +2223,14 @@ void trdb_print_packet(FILE *stream, const struct tr_packet *packet)
             fprintf(stream, "    branches  : %" PRIu32 "\n", packet->branches);
             fprintf(stream, "    branch_map: 0x%" PRIx32 "\n",
                     packet->branch_map);
-            fprintf(stream, "    address   : 0x%" PRIx32 "\n", packet->address);
+            fprintf(stream, "    address   : 0x%" PRIxADDR "\n",
+                    packet->address);
             /* TODO: that special full branch map behaviour */
             break;
         case F_ADDR_ONLY:
             fprintf(stream, "PACKET 2: F_ADDR_ONLY\n");
-            fprintf(stream, "    address   : 0x%" PRIx32 "\n", packet->address);
+            fprintf(stream, "    address   : 0x%" PRIxADDR "\n",
+                    packet->address);
             break;
         case F_SYNC:
             fprintf(stream, "PACKET 3: F_SYNC\n");
@@ -2231,14 +2250,15 @@ void trdb_print_packet(FILE *stream, const struct tr_packet *packet)
 
             fprintf(stream, "    branch    : %s\n",
                     packet->branch ? "true" : "false");
-            fprintf(stream, "    address   : 0x%" PRIx32 "\n", packet->address);
+            fprintf(stream, "    address   : 0x%" PRIxADDR "\n",
+                    packet->address);
             if (packet->subformat == SF_START)
                 return;
 
             fprintf(stream, "    ecause    : 0x%" PRIx32 "\n", packet->ecause);
             fprintf(stream, "    interrupt : %s\n",
                     packet->interrupt ? "true" : "false");
-            fprintf(stream, "    tval      : 0x%" PRIx32 "\n", packet->tval);
+            fprintf(stream, "    tval      : 0x%" PRIxADDR "\n", packet->tval);
             /* SF_EXCEPTION */
         }
         break;
@@ -2266,12 +2286,12 @@ void trdb_log_instr(struct trdb_ctx *c, const struct tr_instr *instr)
     }
 
     dbg(c, "INSTR\n");
-    dbg(c, "    iaddr     : 0x%08" PRIx32 "\n", instr->iaddr);
-    dbg(c, "    instr     : 0x%08" PRIx32 "\n", instr->instr);
+    dbg(c, "    iaddr     : 0x%08" PRIxADDR "\n", instr->iaddr);
+    dbg(c, "    instr     : 0x%08" PRIxINSN "\n", instr->instr);
     dbg(c, "    priv      : 0x%" PRIx32 "\n", instr->priv);
     dbg(c, "    exception : %s\n", instr->exception ? "true" : "false");
     dbg(c, "    cause     : 0x%" PRIx32 "\n", instr->cause);
-    dbg(c, "    tval      : 0x%" PRIx32 "\n", instr->tval);
+    dbg(c, "    tval      : 0x%" PRIxADDR "\n", instr->tval);
     dbg(c, "    interrupt : %s\n", instr->interrupt ? "true" : "false");
     dbg(c, "    compressed: %s\n", instr->compressed ? "true" : "false");
 }
@@ -2287,13 +2307,13 @@ void trdb_print_instr(FILE *stream, const struct tr_instr *instr)
     }
 
     fprintf(stream, "INSTR\n");
-    fprintf(stream, "    iaddr     : 0x%08" PRIx32 "\n", instr->iaddr);
-    fprintf(stream, "    instr     : 0x%08" PRIx32 "\n", instr->instr);
+    fprintf(stream, "    iaddr     : 0x%08" PRIxADDR "\n", instr->iaddr);
+    fprintf(stream, "    instr     : 0x%08" PRIxINSN "\n", instr->instr);
     fprintf(stream, "    priv      : 0x%" PRIx32 "\n", instr->priv);
     fprintf(stream, "    exception : %s\n",
             instr->exception ? "true" : "false");
     fprintf(stream, "    cause     : 0x%" PRIx32 "\n", instr->cause);
-    fprintf(stream, "    tval      : 0x%" PRIx32 "\n", instr->tval);
+    fprintf(stream, "    tval      : 0x%" PRIxADDR "\n", instr->tval);
     fprintf(stream, "    interrupt : %s\n",
             instr->interrupt ? "true" : "false");
     fprintf(stream, "    compressed: %s\n",

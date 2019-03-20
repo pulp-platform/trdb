@@ -343,16 +343,16 @@ static int test_parse_stimuli_line()
     int exception  = 0;
     int interrupt  = 0;
     uint32_t cause = 0;
-    uint32_t tval  = 0;
+    addr_t tval    = 0;
     uint32_t priv  = 0;
-    uint32_t iaddr = 0;
-    uint32_t instr = 0;
+    addr_t iaddr   = 0;
+    insn_t instr   = 0;
 
     int ret = sscanf(
         "valid=1 exception=0 interrupt=0 cause=00 tval=ff priv=7 addr=1c00809c instr=ffff9317",
         "valid= %d exception= %d interrupt= %d cause= %" SCNx32
-        " tval= %" SCNx32 " priv= %" SCNx32 " addr= %" SCNx32
-        " instr= %" SCNx32,
+        " tval= %" SCNxADDR " priv= %" SCNx32 " addr= %" SCNxADDR
+        " instr= %" SCNxINSN,
         &valid, &exception, &interrupt, &cause, &tval, &priv, &iaddr, &instr);
 
     if (ret != EOF) {
@@ -737,6 +737,7 @@ int test_compress_cvs_trace(const char *trace_path)
             goto fail;
         }
     }
+
     printf("path: %s\n", trace_path);
     if (TRDB_VERBOSE_TESTS) {
         printf("instructions: %zu, packets: %zu, payload bytes: %zu "
@@ -757,6 +758,7 @@ int test_compress_cvs_trace(const char *trace_path)
                bpi_pulp, bpi_pulp / bpi_full * 100 - 100);
     }
 fail:
+
     trdb_free_packet_list(&packet_list);
     trdb_free_instr_list(&instr_list);
     trdb_free(ctx);
@@ -847,8 +849,8 @@ int test_decompress_trace(const char *bin_path, const char *trace_path)
         }
 
         if (instr->iaddr != (*samples)[i].iaddr) {
-            LOG_ERRT("original instr: %" PRIx32 "\n", (*samples)[i].iaddr);
-            LOG_ERRT("reconst. instr: %" PRIx32 "\n", instr->iaddr);
+            LOG_ERRT("original instr: %" PRIxADDR "\n", (*samples)[i].iaddr);
+            LOG_ERRT("reconst. instr: %" PRIxADDR "\n", instr->iaddr);
             status = TRDB_FAIL;
             goto fail;
         }
@@ -970,8 +972,9 @@ int test_decompress_cvs_trace_differential(const char *bin_path,
         }
 
         if (instr->iaddr != sample->iaddr) {
-            LOG_ERRT("original instr: %" PRIx32 "\n", sample->iaddr);
-            LOG_ERRT("reconst. instr: %" PRIx32 "\n", instr->iaddr);
+            LOG_ERRT("FAIL at instruction number: % d\n", processedcnt);
+            LOG_ERRT("original instr: %" PRIxADDR "\n", sample->iaddr);
+            LOG_ERRT("reconst. instr: %" PRIxADDR "\n", instr->iaddr);
             status = TRDB_FAIL;
             goto fail;
         }
@@ -1095,8 +1098,8 @@ int test_decompress_trace_differential(const char *bin_path,
         }
 
         if (instr->iaddr != (*samples)[i].iaddr) {
-            LOG_ERRT("original instr: %" PRIx32 "\n", (*samples)[i].iaddr);
-            LOG_ERRT("reconst. instr: %" PRIx32 "\n", instr->iaddr);
+            LOG_ERRT("original instr: %" PRIxADDR "\n", (*samples)[i].iaddr);
+            LOG_ERRT("reconst. instr: %" PRIxADDR "\n", instr->iaddr);
             status = TRDB_FAIL;
             goto fail;
         }
@@ -1156,19 +1159,55 @@ int main()
         "data/cvs/rsort.spike_trace",     "data/cvs/spmv.spike_trace",
         "data/cvs/towers.spike_trace",    "data/cvs/vvadd.spike_trace"};
 
-    const char *tv_gen_cvs[] = {
-        "riscv-traces/dhrystone.riscv", "riscv-traces/dhrystone.riscv.cvs",
-        "riscv-traces/median.riscv",    "riscv-traces/median.riscv.cvs",
-        "riscv-traces/mm.riscv",        "riscv-traces/mm.riscv.cvs",
-        "riscv-traces/mt-matmul.riscv", "riscv-traces/mt-matmul.riscv.cvs",
-        "riscv-traces/mt-vvadd.riscv",  "riscv-traces/mt-vvadd.riscv.cvs",
-        "riscv-traces/multiply.riscv",  "riscv-traces/multiply.riscv.cvs",
-        "riscv-traces/pmp.riscv",       "riscv-traces/pmp.riscv.cvs",
-        "riscv-traces/qsort.riscv",     "riscv-traces/qsort.riscv.cvs",
-        "riscv-traces/rsort.riscv",     "riscv-traces/rsort.riscv.cvs",
-        "riscv-traces/spmv.riscv",      "riscv-traces/spmv.riscv.cvs",
-        "riscv-traces/towers.riscv",    "riscv-traces/towers.riscv.cvs",
-        "riscv-traces/vvadd.riscv",     "riscv-traces/vvadd.riscv.cvs"};
+    const char *tv_gen_cvs[] = {"riscv-traces-32/dhrystone.riscv",
+                                "riscv-traces-32/dhrystone.riscv.cvs",
+                                "riscv-traces-32/median.riscv",
+                                "riscv-traces-32/median.riscv.cvs",
+                                "riscv-traces-32/mm.riscv",
+                                "riscv-traces-32/mm.riscv.cvs",
+                                "riscv-traces-32/mt-matmul.riscv",
+                                "riscv-traces-32/mt-matmul.riscv.cvs",
+                                "riscv-traces-32/mt-vvadd.riscv",
+                                "riscv-traces-32/mt-vvadd.riscv.cvs",
+                                "riscv-traces-32/multiply.riscv",
+                                "riscv-traces-32/multiply.riscv.cvs",
+                                "riscv-traces-32/pmp.riscv",
+                                "riscv-traces-32/pmp.riscv.cvs",
+                                "riscv-traces-32/qsort.riscv",
+                                "riscv-traces-32/qsort.riscv.cvs",
+                                "riscv-traces-32/rsort.riscv",
+                                "riscv-traces-32/rsort.riscv.cvs",
+                                "riscv-traces-32/spmv.riscv",
+                                "riscv-traces-32/spmv.riscv.cvs",
+                                "riscv-traces-32/towers.riscv",
+                                "riscv-traces-32/towers.riscv.cvs",
+                                "riscv-traces-32/vvadd.riscv",
+                                "riscv-traces-32/vvadd.riscv.cvs"};
+
+    const char *tv_gen_cvs_64[] = {"riscv-traces-64/dhrystone.riscv",
+                                   "riscv-traces-64/dhrystone.riscv.cvs",
+                                   "riscv-traces-64/median.riscv",
+                                   "riscv-traces-64/median.riscv.cvs",
+                                   "riscv-traces-64/mm.riscv",
+                                   "riscv-traces-64/mm.riscv.cvs",
+                                   "riscv-traces-64/mt-matmul.riscv",
+                                   "riscv-traces-64/mt-matmul.riscv.cvs",
+                                   "riscv-traces-64/mt-vvadd.riscv",
+                                   "riscv-traces-64/mt-vvadd.riscv.cvs",
+                                   "riscv-traces-64/multiply.riscv",
+                                   "riscv-traces-64/multiply.riscv.cvs",
+                                   "riscv-traces-64/pmp.riscv",
+                                   "riscv-traces-64/pmp.riscv.cvs",
+                                   "riscv-traces-64/qsort.riscv",
+                                   "riscv-traces-64/qsort.riscv.cvs",
+                                   "riscv-traces-64/rsort.riscv",
+                                   "riscv-traces-64/rsort.riscv.cvs",
+                                   "riscv-traces-64/spmv.riscv",
+                                   "riscv-traces-64/spmv.riscv.cvs",
+                                   "riscv-traces-64/towers.riscv",
+                                   "riscv-traces-64/towers.riscv.cvs",
+                                   "riscv-traces-64/vvadd.riscv",
+                                   "riscv-traces-64/vvadd.riscv.cvs"};
 
     /* const char *tv_cvs[] = {"data/cvs/pmp.spike_trace"}; */
     INIT_TESTS();
@@ -1207,6 +1246,8 @@ int main()
     if (TRDB_ARRAY_SIZE(tv) % 2 != 0)
         LOG_ERRT("Test vector strings are incomplete.");
 
+        /* not supported for 64-bit simply because of c.jal incompatibility */
+#ifndef TRDB_ARCH64
     for (unsigned j = 0; j < TRDB_ARRAY_SIZE(tv); j += 2) {
         const char *bin  = tv[j];
         const char *stim = tv[j + 1];
@@ -1219,9 +1260,17 @@ int main()
         RUN_TEST(test_decompress_trace_differential, bin, stim, true, true);
     }
 
+#endif
+
+#ifdef TRDB_ARCH64
+    for (unsigned j = 0; j < TRDB_ARRAY_SIZE(tv_gen_cvs_64); j += 2) {
+        const char *bin  = tv_gen_cvs_64[j];
+        const char *stim = tv_gen_cvs_64[j + 1];
+#else
     for (unsigned j = 0; j < TRDB_ARRAY_SIZE(tv_gen_cvs); j += 2) {
         const char *bin  = tv_gen_cvs[j];
         const char *stim = tv_gen_cvs[j + 1];
+#endif
         if (access(bin, R_OK) || access(stim, R_OK)) {
             LOG_ERRT("File not found, skipping test at %s\n", bin);
             continue;

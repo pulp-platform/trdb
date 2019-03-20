@@ -1974,9 +1974,11 @@ void trdb_disassemble_block(size_t len, bfd_byte data[len],
     }
 }
 
-void trdb_disassemble_single_instruction(uint32_t instr, uint32_t addr,
+void trdb_disassemble_single_instruction(insn_t instr, addr_t addr,
                                          struct disassembler_unit *dunit)
 {
+    assert((SHR(instr, 32) & 0xffffffff) == 0);
+
     if (!dunit) {
         fprintf(stderr, "disassembler_unit is NULL\n");
         return;
@@ -2023,7 +2025,7 @@ void trdb_disassemble_single_instruction(uint32_t instr, uint32_t addr,
     free(data);
 }
 
-void trdb_disassemble_single_instruction_slow(uint32_t instr, uint32_t addr)
+void trdb_disassemble_single_instruction_slow(insn_t instr, addr_t addr)
 {
     struct disassembler_unit dunit = {0};
     struct disassemble_info dinfo  = {0};

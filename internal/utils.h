@@ -152,6 +152,16 @@ void trdb_log(struct trdb_ctx *ctx, int priority, const char *file, int line,
  */
 #define MASK_FROM(len) (len != 64 ? (((uint64_t)1 << len) - 1) : (uint64_t)-1)
 
+/**
+ * Shift @p x by any value  0 <= shv <= XLEN to the right.
+ */
+#define SHR(x, shv) (shv != XLEN ? ((addr_t)x >> shv) : (addr_t)0)
+
+/**
+ * Shift @p x by any value  0 <= shv <= XLEN to the left.
+ */
+#define SHL(x, shv) (shv != XLEN ? ((addr_t)x << shv) : (addr_t)0)
+
 /* bit manipulation utility functions */
 
 uint32_t sign_extendable_bits(uint32_t addr);
