@@ -393,7 +393,7 @@ static int test_stimuli_to_trace_list(const char *path)
     struct trdb_ctx *c = trdb_new();
     struct tr_instr *tmp;
     struct tr_instr **samples = &tmp;
-    int status                = 0;
+    int status                = TRDB_SUCCESS;
     size_t sizea              = 0;
     status                    = trdb_stimuli_to_trace(c, path, samples, &sizea);
     if (status < 0) {
@@ -408,15 +408,18 @@ static int test_stimuli_to_trace_list(const char *path)
     status       = trdb_stimuli_to_trace_list(c, path, &instr_list, &sizel);
     if (status < 0) {
         LOG_ERRT("failed to parse stimuli\n");
+        status = TRDB_FAIL;
         goto fail;
     }
     if (sizel != sizea) {
         LOG_ERRT("list sizes don't match: %zu vs %zu\n", sizea, sizel);
+        status = TRDB_FAIL;
         goto fail;
     }
 
     if (TAILQ_EMPTY(&instr_list)) {
         LOG_ERRT("list is empty even though we read data\n");
+        status = TRDB_FAIL;
         goto fail;
     }
 
@@ -425,11 +428,13 @@ static int test_stimuli_to_trace_list(const char *path)
     TAILQ_FOREACH (instr, &instr_list, list) {
         if (i >= sizea) {
             LOG_ERRT("trying to access out of bounds index\n");
+            status = TRDB_FAIL;
             goto fail;
         }
 
         if (!trdb_compare_instr(c, instr, &(*samples)[i])) {
             LOG_ERRT("tr_instr are not equal\n");
+            status = TRDB_FAIL;
             goto fail;
             trdb_print_instr(stdout, instr);
             trdb_print_instr(stdout, &(*samples)[i]);
@@ -441,7 +446,7 @@ fail:
     trdb_free(c);
     trdb_free_instr_list(&instr_list);
     free(*samples);
-    return TRDB_SUCCESS;
+    return status;
 }
 
 static int test_stimuli_to_packet_dump(const char *path)
