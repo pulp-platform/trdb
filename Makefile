@@ -274,7 +274,7 @@ riscv-fesvr/build.ok:
 .PHONY: clean
 clean:
 	rm -rf $(MAINS) $(SV_LIB).so $(STATIC_LIB).a $(LIB).so \
-		$(OBJS) $(MAINS_OBJS) $(DPI_OBJS) $(DEPDIRS)
+		$(OBJS) $(MAINS_OBJS) $(DPI_OBJS)
 
 .PHONY: distclean
 distclean: clean
@@ -282,9 +282,10 @@ distclean: clean
 	rm -rf doc/*
 	rm -rf trdb-spike
 	rm -rf riscv-fesvr
-	rm -rf riscv-isa-sim
-	rm -rf riscv-tests
-	rm -rf riscv-traces
+	rm -rf riscv-isa-sim-*
+	rm -rf riscv-tests-*
+	rm -rf riscv-traces-*
+	rm -rf $(DEPDIRS)
 
 # include auto generated header dependency information
 include $(wildcard $(addsuffix /*.d,$(DEPDIRS)))
