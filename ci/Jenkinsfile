@@ -1,0 +1,79 @@
+//def labels = ['trdb-gcc-centos', 'trdb-clang-centos', 'trdb-gcc-ubuntu', 'trdb-clang-ubuntu']
+//def cc_envs = ['CC=gcc', 'CC=clang', 'CC=gcc', 'CC=clang']
+//def os_envs = ['centos7', 'centos7', 'ubuntu', 'ubuntu']
+def labels = ['trdb-gcc-centos', 'trdb-clang-centos']
+def cc_envs = ['CC=gcc', 'CC=clang']
+def os_envs = ['centos7', 'centos7']
+
+def builders = [:]
+
+for (int i = 0; i < labels.size(); i++) {
+    def label = labels[i]
+    def cc_env = cc_envs[i]
+    def os_env = os_envs[i]
+
+    // Create a map to pass in to the 'parallel' step so we can fire all the builds at once
+    builders[label] = {
+	node (os_env && ' && !vm1-centos7'){
+	    try {
+		stage('Preparation of ' + label) {
+		    withEnv(['SPIKE_TEST_TRACES_URL=https://github.com/bluewww/spike-instruction-trace-patch',
+			     'PATH+WHATEVER=/home/balasr/.local/bin:/home/balasr/.riscv/bin']) {
+			git 'https://github.com/pulp-platform/trdb/'
+			//sh "./ci/get-cvs-stimuli.sh"
+			sh "make riscv-fesvr/build.ok"
+
+			def steps = [:]
+			steps["spike-traces-32"] = {
+			    sh "make spike-traces-32"
+			}
+			steps["spike-traces-64"] = {
+			    sh "make spike-traces-64"
+			}
+			parallel steps
+		    }
+		}
+		stage('Build (32-bit) of ' + label) {
+		    if (isUnix()) {
+			withEnv([cc_env]) {
+			    sh "make all"
+			}
+		    } else {
+			 echo "unix only"
+		    }
+		}
+		stage('Test (32-bit) of ' + label) {
+		    sh "make test"
+		}
+		stage('Build (64-bit) of ' + label) {
+		    if (isUnix()) {
+			withEnv([cc_env]) {
+			    sh "make clean all CFLAGS=-DTRDB_ARCH64"
+			}
+		    } else {
+		       echo "unix only"
+		    }
+		}
+		stage('Test (64-bit) of ' + label) {
+		    sh "make test"
+		}
+	    } catch (e) {
+		currentBuild.result = "FAILED"
+		echo "SENDING E-MAIL"
+		notifyFailed()
+		throw e
+	    }
+	}
+    }
+}
+
+def notifyFailed() {
+  emailext (
+      subject: "FAILED: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'",
+      body: """<p>FAILED: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]':</p>
+	<p>Check console output at "<a href="${env.BUILD_URL}">${env.JOB_NAME} [${env.BUILD_NUMBER}]</a>"</p>""",
+      recipientProviders: [[$class: 'DevelopersRecipientProvider']]
+    )
+}
+
+parallel builders
