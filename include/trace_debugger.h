@@ -141,8 +141,8 @@ enum tr_msg_type { W_EMPTY = 0, W_TIMER = 1, W_TRACE = 2, W_SOFTWARE = 3 };
  * mechanism on the hardware. For the PULP platform there is just a small packet
  * length indicator
  *
- * There are four possible packet types. See <a
- * href="https://github.com/riscv/riscv-trace-spec">riscv-trace-spec</a> for
+ * There are four possible packet types. See
+ * <a href="https://github.com/riscv/riscv-trace-spec">riscv-trace-spec</a> for
  * details. A list or array of such packets and a bfd struct represent together
  * a compressed list or array of tr_instr.
  */
@@ -274,7 +274,7 @@ void trdb_reset_decompression(struct trdb_ctx *ctx);
  *
  * @return a new trdb library context
  */
-struct trdb_ctx *trdb_new();
+struct trdb_ctx *trdb_new(void);
 
 /**
  * Destroys a trdb context.
@@ -391,7 +391,7 @@ bool trdb_get_pulp_extra_packet(struct trdb_ctx *ctx);
  * runtime).
  *
  * @param ctx a trace debugger context
- * @param extra_packets whether an extra packet should be generated
+ * @param extra_packet whether an extra packet should be generated
  */
 void trdb_set_pulp_extra_packet(struct trdb_ctx *ctx, bool extra_packet);
 
@@ -437,7 +437,7 @@ size_t trdb_get_pulpbits(struct trdb_ctx *ctx);
  * trdb_compress_trace_step().
  *
  * @param ctx a trace debugger context
- * @eturn number of emitted packets
+ * @return number of emitted packets
  */
 size_t trdb_get_packetcnt(struct trdb_ctx *ctx);
 
@@ -481,7 +481,7 @@ void trdb_get_packet_stats(struct trdb_ctx *ctx,
  *
  * @param ctx trace debugger context/state
  * @param packet will be filled with data
- * @param instr the next instruction in the sequence
+ * @param instr the next instruction to compress
  * @return 0 or a positive number of generated packets on success, a negative
  * error code otherwise
  * @return -trdb_invalid if @p ctx, @p packet or @p instr is NULL
@@ -501,7 +501,8 @@ int trdb_compress_trace_step(struct trdb_ctx *ctx, struct tr_packet *packet,
  *
  * @param ctx trace debugger context/state
  * @param packet_list list to add packet to
- * @param 0 or a positive number of generated packets on success, a negative
+ * @param instr the next instruction to compress
+ * @return 0 or a positive number of generated packets on success, a negative
  * error code otherwise
  * @return -trdb_invalid if @p ctx, @p packet_list or @p instr is NULL
  * @return -trdb_bad_instr if an unsupported instruction was passed through @p
@@ -575,7 +576,7 @@ void trdb_disassemble_instr(struct tr_instr *instr,
 
 /**
  * Disassemble @p instr using fprint_func in #disassembler_unit.dinfo and
- * additionaly information from the @p abfd and settings in @dp dunit to produce
+ * additionaly information from the @p abfd and settings in @p dunit to produce
  * more useful disassembly. Options such as intermixing sourcecode, showing file
  * and line numbers, resolving addresses to symbols etc. are available. See
  * trdb_disassemble_trace_with_bfd() and trdb_set_disassembly_conf() for more
@@ -631,7 +632,7 @@ void trdb_print_packet(FILE *stream, const struct tr_packet *packet);
  * @param c the context of the trace debugger
  * @param instr tr_instr to log
  */
-void trdb_log_instr(struct trdb_ctx *c, const struct tr_instr *packet);
+void trdb_log_instr(struct trdb_ctx *c, const struct tr_instr *instr);
 
 /**
  *  Prints a single instruction in a formatted manner to @p stream.
@@ -639,7 +640,7 @@ void trdb_log_instr(struct trdb_ctx *c, const struct tr_instr *packet);
  * @param stream output to write to
  * @param instr tr_instr to print
  */
-void trdb_print_instr(FILE *stream, const struct tr_instr *packet);
+void trdb_print_instr(FILE *stream, const struct tr_instr *instr);
 
 /**
  * Compare two instructions for memberwise equality;

@@ -496,6 +496,8 @@ static bool branch_taken(bool before_compressed, addr_t addr_before,
 
 uint32_t branch_map_len(uint32_t branches)
 {
+    assert(branches <= 31);
+
     if (branches == 0) {
         return 31;
     } else if (branches <= 1) {
@@ -509,7 +511,7 @@ uint32_t branch_map_len(uint32_t branches)
     } else if (branches <= 31) {
         return 31;
     }
-    return -1;
+    return 0;
 }
 
 /* Some jumps can't be predicted i.e. the jump address can only be figured out
@@ -1208,7 +1210,7 @@ static int read_memory_at_pc(bfd_vma pc, uint64_t *instr,
     bfd_byte packet[2];
     *instr = 0;
     bfd_vma n;
-    int status;
+    int status = 0;
 
     /* Instructions are a sequence of 2-byte packets in little-endian order.  */
     for (n = 0; n < sizeof(uint64_t) && n < riscv_instr_len(*instr); n += 2) {
@@ -1276,7 +1278,7 @@ static int disassemble_at_pc(struct trdb_ctx *c, bfd_vma pc,
 
     instr->valid      = true;
     instr->iaddr      = pc;
-    instr->instr      = instr_bits;
+    instr->instr      = (insn_t)instr_bits;
     instr->compressed = instr_size == 2;
     /* instr->priv = 0 */
     return instr_size;
@@ -1518,14 +1520,17 @@ int trdb_decompress_trace(struct trdb_ctx *c, bfd *abfd,
                     hit_address = true;
 
                 /* handle decoding RAS */
-                addr_t ret_addr              = 0;
-                enum trdb_ras instr_ras_type = update_ras(
-                    c, dis_instr->instr, dis_instr->iaddr, ras, &ret_addr);
-                if (instr_ras_type < 0) {
+                addr_t ret_addr = 0;
+
+                int ras_ret = update_ras(c, dis_instr->instr, dis_instr->iaddr,
+                                         ras, &ret_addr);
+                if (ras_ret < 0) {
                     err(c, "return address stack in bad state: %s\n",
                         trdb_errstr(trdb_errcode(status)));
                     goto fail;
                 }
+                enum trdb_ras instr_ras_type = ras_ret;
+
                 if (instr_ras_type == coret) {
                     err(c, "coret not implemented yet\n");
                     goto fail;
@@ -1676,8 +1681,6 @@ int trdb_decompress_trace(struct trdb_ctx *c, bfd *abfd,
 
             while (!(dec_ctx->branch_map.cnt == 0 &&
                      (hit_discontinuity || hit_address))) {
-
-                int status = 0;
 
                 if (pc >= section->vma + stop_offset || pc < section->vma) {
                     section = trdb_get_section_for_vma(abfd, pc);

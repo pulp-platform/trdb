@@ -216,7 +216,7 @@ int trdb_get_disassembly_conf(struct disassembler_unit *dunit, uint32_t *conf);
  * format addresses. It can also be abused to print other information.
  *
  * @param vma the virtual memory address where this instruction is located at
- * @param dinfo context of disassembly
+ * @param inf context of disassembly
  */
 void trdb_print_address(bfd_vma vma, struct disassemble_info *inf);
 
@@ -229,8 +229,8 @@ void trdb_print_address(bfd_vma vma, struct disassemble_info *inf);
  * with it.
  *
  * @param vma the virtual memory address where this instruction is located at
- * @param dinfo context of disassembly
- * @return
+ * @param inf context of disassembly
+ * @return 1 if there is a symbol at @p vma, 0 otherwise
  */
 int trdb_symbol_at_address(bfd_vma vma, struct disassemble_info *inf);
 
@@ -260,7 +260,7 @@ void trdb_dump_section_names(bfd *abfd);
 /**
  * Print all supported targets of the used libopcodes to stdout.
  */
-void trdb_dump_target_list();
+void trdb_dump_target_list(void);
 
 /**
  * Default #print_address_func used in disassemble_info, set by
@@ -278,7 +278,7 @@ void trdb_riscv32_print_address(bfd_vma vma, struct disassemble_info *dinfo);
  * Return if vma is contained in the given section of abfd.
  *
  * @param abfd the bfd representing the binary
- * @parma section the section to test against
+ * @param section the section to test against
  * @param vma the virtual memory address to test for
  * @return whether @p vma is in contained in @p section
  */

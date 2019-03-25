@@ -435,9 +435,9 @@ static int test_stimuli_to_trace_list(const char *path)
         if (!trdb_compare_instr(c, instr, &(*samples)[i])) {
             LOG_ERRT("tr_instr are not equal\n");
             status = TRDB_FAIL;
-            goto fail;
             trdb_print_instr(stdout, instr);
             trdb_print_instr(stdout, &(*samples)[i]);
+            goto fail;
         }
         i++;
     }
@@ -574,7 +574,7 @@ fail:
     return status;
 }
 
-int test_compress_trace(const char *trace_path, const char *packets_path)
+static int test_compress_trace(const char *trace_path, const char *packets_path)
 {
     struct trdb_ctx *ctx = NULL;
 
@@ -688,7 +688,7 @@ fail:
     return status;
 }
 
-int test_compress_cvs_trace(const char *trace_path)
+static int test_compress_cvs_trace(const char *trace_path)
 {
     int status           = TRDB_SUCCESS;
     struct trdb_ctx *ctx = trdb_new();
@@ -765,7 +765,7 @@ fail:
     return status;
 }
 
-int test_decompress_trace(const char *bin_path, const char *trace_path)
+static int test_decompress_trace(const char *bin_path, const char *trace_path)
 {
     bfd *abfd                 = NULL;
     struct tr_instr *tmp      = NULL;
@@ -874,7 +874,7 @@ fail:
     return status;
 }
 
-int test_decompress_cvs_trace_differential(const char *bin_path,
+static int test_decompress_cvs_trace_differential(const char *bin_path,
                                            const char *trace_path,
                                            bool differential, bool implicit_ret)
 {
@@ -955,7 +955,6 @@ int test_decompress_cvs_trace_differential(const char *bin_path,
 
     if (TRDB_VERBOSE_TESTS) {
         LOG_INFOT("Reconstructed trace disassembly:\n");
-        struct tr_instr *instr;
         TAILQ_FOREACH (instr, &instr1_head, list) {
         }
     }
@@ -998,7 +997,7 @@ fail:
     return status;
 }
 
-int test_decompress_trace_differential(const char *bin_path,
+static int test_decompress_trace_differential(const char *bin_path,
                                        const char *trace_path,
                                        bool differential, bool implicit_ret)
 {
@@ -1183,7 +1182,7 @@ int main()
                                 "riscv-traces-32/towers.riscv.cvs",
                                 "riscv-traces-32/vvadd.riscv",
                                 "riscv-traces-32/vvadd.riscv.cvs"};
-
+#ifdef TRDB_ARCH64
     const char *tv_gen_cvs_64[] = {"riscv-traces-64/dhrystone.riscv",
                                    "riscv-traces-64/dhrystone.riscv.cvs",
                                    "riscv-traces-64/median.riscv",
@@ -1208,6 +1207,7 @@ int main()
                                    "riscv-traces-64/towers.riscv.cvs",
                                    "riscv-traces-64/vvadd.riscv",
                                    "riscv-traces-64/vvadd.riscv.cvs"};
+#endif
 
     /* const char *tv_cvs[] = {"data/cvs/pmp.spike_trace"}; */
     INIT_TESTS();

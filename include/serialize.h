@@ -56,7 +56,7 @@ int trdb_pulp_serialize_packet(struct trdb_ctx *c, struct tr_packet *packet,
  * @return -trdb_invalid if @p c, @p fp or @p packet is NULL
  * @return -trdb_bad_packet if only an incomplete packet could be read from @p
  * fp or none at all
- * @return -trdb_file_read if the contents of @fp could not be fully read
+ * @return -trdb_file_read if the contents of @p fp could not be fully read
  * @return -trdb_bad_config if the decoding assumptions don't hold because of
  * contradictionary data in @p packet
  */
