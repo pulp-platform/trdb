@@ -15,7 +15,7 @@ fi
 
 if ! [ -e $RISCV/bin/riscv32-unknown-elf-gcc ]; then
     if ! [ -e $RISCV/riscv-gnu-toolchain ]; then
-	git clone https://github.com/riscv/riscv-gnu-toolchain.git
+	git clone --recursive https://github.com/riscv/riscv-gnu-toolchain.git
     fi
 
     cd riscv-gnu-toolchain
