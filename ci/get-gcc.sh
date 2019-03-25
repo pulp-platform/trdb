@@ -20,7 +20,7 @@ if ! [ -e $RISCV/bin/riscv32-unknown-elf-gcc ]; then
 
     cd riscv-gnu-toolchain
     git checkout $VERSION
-    git submodule update --init --recursive
+    git submodule update --checkout
 
     if [[ $1 -ne "0" || -z ${1} ]]; then
       echo "Compiling RISC-V Toolchain"
