@@ -127,7 +127,7 @@ void trdb_sv_feed_trace(svLogic ivalid, svLogic iexception, svLogic interrupt,
             err(ctx, "failed to serialize packet, continuing...\n");
         }
         packetcnt++;
-        // TODO: change that to debug
+        /* TODO: change that to debug */
         info(ctx, "ID: %d\n", packetcnt);
         trdb_print_packet(stdout, latest_packet);
 
@@ -139,10 +139,11 @@ void trdb_sv_feed_trace(svLogic ivalid, svLogic iexception, svLogic interrupt,
         /* this is just a integer divions (ceiling) of bitcount/8 */
         size_t packet_bytes = (bitcnt / 8 + (bitcnt % 8 != 0));
 
-        if ((size_t)packet_max_len / 8 < packet_bytes) {
-            err(ctx, "packet size on the sv side is too small\n");
-            return;
-        }
+	/* TODO: fix this check */
+        /* if ((size_t)packet_max_len / 8 < packet_bytes) { */
+        /*     err(ctx, "packet size on the sv side is too small\n"); */
+        /*     return; */
+        /* } */
 
         /* fill in vector with packet and zero pad */
         for (size_t i = 0; i < total_bytes; i++) {
