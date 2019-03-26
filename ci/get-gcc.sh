@@ -2,10 +2,10 @@
 
 set -e
 
-VERSION="bb41926cb5a62e6cbe4b659ded6ff52c70b2baf1"
+VERSION="afcc8bc655d30cf6af054ac1d3f5f89d0627aa79"
 
 
-mkdir -p $RISCV/
+mkdir -p $RISCV
 
 cd $RISCV
 
@@ -15,7 +15,7 @@ fi
 
 if ! [ -e $RISCV/bin/riscv32-unknown-elf-gcc ]; then
     if ! [ -e $RISCV/riscv-gnu-toolchain ]; then
-	git clone --recursive https://github.com/riscv/riscv-gnu-toolchain.git
+	git clone -j ${NUM_JOBS} --recursive https://github.com/riscv/riscv-gnu-toolchain.git
     fi
 
     cd riscv-gnu-toolchain
