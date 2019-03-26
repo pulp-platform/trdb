@@ -469,6 +469,17 @@ void trdb_get_packet_stats(struct trdb_ctx *ctx,
     stats->bmap_full_addr_packets = rstats->bmap_full_addr_packets;
 }
 
+uint32_t trdb_sign_extendable_bits(addr_t addr)
+{
+
+    /* TODO: a runtime switch would probably be better */
+#ifdef TRDB_ARCH64
+    return sign_extendable_bits64(addr);
+#else
+    return sign_extendable_bits(addr);
+#endif
+}
+
 static bool is_branch(insn_t instr)
 {
     assert((SHR(instr, 32) & 0xffffffff) == 0);
@@ -553,14 +564,8 @@ static bool differential_addr(int *lead, addr_t absolute, addr_t differential)
     int abs  = 0;
     int diff = 0;
 
-    /* TODO: a runtime switch would probably be better */
-#ifdef TRDB_ARCH64
-    abs  = sign_extendable_bits64(absolute);
-    diff = sign_extendable_bits64(differential);
-#else
-    abs  = sign_extendable_bits(absolute);
-    diff = sign_extendable_bits(differential);
-#endif
+    abs  = trdb_sign_extendable_bits(absolute);
+    diff = trdb_sign_extendable_bits(differential);
     // /* on tie we probe which one would be better */
     // if ((abs == 32) && (diff == 32)) {
     //     if ((abs & 1) == last) {
