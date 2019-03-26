@@ -1,4 +1,6 @@
 * TRDB -- Library and CLI Tools for RISC-V Processor Tracing
+  [[https://travis-ci.com/pulp-platform/trdb][file:https://travis-ci.com/pulp-platform/trdb.svg?branch=master]]
+
   This library provides software tooling for decompressing, compressing and
   disassembling captured execution traces of a RISC-V Core and is compliant with
   the [[https://github.com/riscv/riscv-trace-spec][RISC-V Processor Trace Specification]]. It is used together with the
