@@ -1,14 +1,36 @@
 dist: xenial
+
 language: c
 compiler:
   - gcc
+
+sudo: false
 
 addons:
   apt:
     sources:
       - ubuntu-toolchain-r-test
     packages:
+      - autoconf
+      - automake
+      - autotools-dev
+      - bc
+      - bison
+      - build-essential
+      - curl
+      - dejagnu
+      - expect
+      - flex
+      - gawk
+      - gperf
+      - libgmp-dev
+      - libmpc-dev
+      - libmpfr-dev
+      - libtool
+      - patchutils
+      - texinfo
       - gcc-7
+      - g++-7
       - valgrind
 
 env:
@@ -17,6 +39,7 @@ env:
 
 before_install:
   - export CC=gcc-7
+  - export CXX=g++7
   - export PATH=$RISCV/bin:$PATH
   - export NUM_JOBS=4
 
