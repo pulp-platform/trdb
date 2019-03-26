@@ -35,7 +35,7 @@ ALL_CFLAGS_DBG  = -std=gnu11 -Wall -Wextra -Wno-missing-field-initializers \
 			-fsanitize=leak \
 
 
-QUESTASIM_PATH  = /usr/pack/modelsim-10.5c-kgf/questasim
+QUESTASIM_PATH  = /usr/pack/modelsim-10.7b-kgf/questasim
 
 # Prebuilt libbfd, libopcodes, libz and libiberty because it is annoying to
 # build pulp-riscv-binutils-gdb. If you decide to use your own build, then
