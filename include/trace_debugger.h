@@ -470,6 +470,14 @@ void trdb_get_packet_stats(struct trdb_ctx *ctx,
                            struct trdb_packet_stats *stats);
 
 /**
+ * Compute the number of equal (all ones or all zeros) leading bits in @p addr.
+ *
+ * @param addr the address
+ * @return the number of leading equal bits in @p addr
+ */
+uint32_t trdb_sign_extendable_bits(addr_t addr);
+
+/**
  * Compress the given sequence of instruction to a sequence of packets.
  *
  * The packets should allow trdb_decompress_trace() to reconstruct the original

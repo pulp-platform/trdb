@@ -73,12 +73,14 @@ int trdb_pulp_serialize_packet(struct trdb_ctx *c, struct tr_packet *packet,
             if (trdb_is_full_address(c))
                 *bitcnt += XLEN;
             else
-                *bitcnt += (XLEN - sign_extendable_bits(packet->address) + 1);
+                *bitcnt +=
+                    (XLEN - trdb_sign_extendable_bits(packet->address) + 1);
         } else {
             /* no address, but compress full branch map*/
             if (trdb_get_compress_branch_map(c)) {
                 *bitcnt -= len;
-                uint32_t sext = sign_extendable_bits(packet->branch_map << 1);
+                uint32_t sext =
+                    trdb_sign_extendable_bits(packet->branch_map << 1);
                 if (sext > 31)
                     sext = 31;
                 *bitcnt += (31 - sext + 1);
@@ -114,12 +116,13 @@ int trdb_pulp_serialize_packet(struct trdb_ctx *c, struct tr_packet *packet,
             data.bits |=
                 ((__uint128_t)packet->address
                  << (PULPPKTLEN + MSGTYPELEN + FORMATLEN + BRANCHLEN + len));
-            *bitcnt += (XLEN - sign_extendable_bits(packet->address) + 1);
+            *bitcnt += (XLEN - trdb_sign_extendable_bits(packet->address) + 1);
         } else {
             /* no address, but compress full branch map*/
             if (trdb_get_compress_branch_map(c)) {
                 *bitcnt -= len;
-                uint32_t sext = sign_extendable_bits(packet->branch_map << 1);
+                uint32_t sext =
+                    trdb_sign_extendable_bits(packet->branch_map << 1);
                 if (sext > 31)
                     sext = 31;
                 *bitcnt += (31 - sext + 1);
