@@ -5,6 +5,11 @@ compiler:
   - gcc
 
 sudo: false
+cache:
+  apt: true
+  directories:
+    $RISCV
+timeout: 1000
 
 addons:
   apt:
@@ -64,9 +69,9 @@ jobs:
     - stage: build2
       name: build tools
       script:
+        - make riscv-fesvr/build.ok
         - make spike-32
         - make spike-64
-        - make riscv-fesvr/build.ok
     - stage: testdata
       name: generate test data
       script:
@@ -80,3 +85,5 @@ jobs:
       name: run spike trace tests (64-bit)
       script:
         - ./ci/run-tests-64.sh
+
+install: travis_wait
