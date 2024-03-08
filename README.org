@@ -5,19 +5,19 @@
   [[https://github.com/pulp-platform/trace_debugger][hardware trace module]] of the PULP project.
 
 ** Features
-   =libtrdb= routines that can be used to
+   =libtrdb= provides routines that can be used to
    + decompress trace packets
    + disassemble traces
-   + Model a trace encoding source (processor interface to trace packets)
+   + model a trace encoding source (processor interface to trace packets)
 
-   =trdb= command line tool(s) used to
-   + do the above on a CLI
+   The =trdb= command line tool is used to provide a command line interface to
+   =libtrdb= functionalities.
 
   The trace source model accepts a stimuli/trace file and produces the sequence
   of packages that the [[https://github.com/pulp-platform/trace_debugger][PULP RTL]] IP would. An example of how such a trace file
   looks like can be found in =data/trdb_stimuli=. This is what the RISC-V core
   sends to the PULP hardware trace debugger each cycle. It is used by the
-  testbench of the pulp hardware tracer in by employing via the DPI.
+  testbench of the PULP hardware tracer in by employing via the DPI.
 
   The =trdb= binary provides functionality to decompress recorded packages and
   to compress stimuli/trace files.
@@ -35,11 +35,38 @@
    #+END_SRC
 
 ** Build
-   Run =make all= for a release build of =trdb= or =make debug= for a debug
-   build (debug symbols, asserts, address sanitizer, debug level logging, no
-   optimizations). Run =make lib= to build =libtrdb.so=, a library for using the
-   C-model, the decompression and disassembly functionality. Run =make docs= to
-   build the documentation with doxygen. It will be put under =doc/=.
+   Run
+
+   #+BEGIN_SRC bash
+   make all
+   #+END_SRC
+
+   or
+
+   #+BEGIN_SRC bash
+   make debug
+   #+END_SRC
+
+   for a release or debug build (debug symbols, asserts, address sanitizer, debug level logging, no
+   optimizations) of =trdb= respectively. You can find the tool
+   under =main/trdb=.
+
+   To build =libtrdb.so= call
+
+   #+BEGIN_SRC bash
+   make lib
+   #+END_SRC
+
+   =libtrdb= is a library for using the C-model, the decompression and
+   disassembly functionality.
+
+   Run
+
+   #+BEGIN_SRC bash
+   make docs
+   #+END_SRC
+
+   to build the documentation with doxygen. It will be put under =doc/=.
 
 ** Usage of =trdb=
 *** Compression
