@@ -232,9 +232,9 @@ spike-$(1): riscv-isa-sim-$(1)/build.ok riscv-fesvr/build.ok
 
 riscv-isa-sim-$(1)/build.ok: riscv-fesvr/build.ok
 	rm -rf riscv-isa-sim-$(1)
-	git clone https://github.com/pulp-platform/riscv-isa-sim riscv-isa-sim-$(1)
+	git clone https://github.com/pulp-platform/riscv-isa-sim riscv-isa-sim-$(1) -b spike_trace_path
 	cd riscv-isa-sim-$(1) && \
-		LDFLAGS="-L../riscv-fesvr" ./configure --with-isa=RV$(1)IMC
+		LDFLAGS="-L../riscv-fesvr" ./configure --with-isa=rv$(1)imc
 	cd riscv-isa-sim-$(1) && \
 		ln -s ../riscv-fesvr/fesvr . && \
 		$(MAKE) && \
