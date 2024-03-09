@@ -256,8 +256,10 @@ test-trdb-$(1):
 riscv-tests-$(1)/benchmarks/build.ok:
 	rm -rf riscv-tests-$(1)
 	git clone https://github.com/riscv/riscv-tests/ --recursive riscv-tests-$(1)
-	cd riscv-tests-$(1)/benchmarks && XLEN=$(1) $(MAKE) && touch build.ok
-
+	cd riscv-tests-$(1) && git checkout ea85805 --recurse-submodules
+	cd riscv-tests-$(1) && ./configure --with-xlen=$(1)
+	cd riscv-tests-$(1) && $(MAKE) benchmarks RISCV_GCC_OPTS="-DPREALLOCATE=1 -mcmodel=medany -static -std=gnu99 -O2 -ffast-math -fno-common -fno-builtin-printf -fno-tree-loop-distribute-patterns -march=rv$(1)gcv -mabi=ilp32"
+	cd riscv-tests-$(1) && touch build.ok
 endef
 
 
