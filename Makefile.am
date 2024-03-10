@@ -6,16 +6,20 @@ noinst_PROGRAMS = tests
 TRDB_ALL_LINKER_FLAGS = -Llib/opcodes -Llib/bfd -Llib/libiberty -Llib/zlib
 TRDB_ALL_LINKER_LIBS= -lbfd -lopcodes -liberty -lz -ldl -lc
 
-trdb_SOURCES = trace_debugger.c utils.c serialize.c error.c disassembly.c main/trdb.c
+trdb_SOURCES = src/trace_debugger.c src/utils.c src/serialize.c \
+	src/error.c src/disassembly.c src/trdb.c
+
 trdb_LDFLAGS = $(TRDB_ALL_LINKER_FLAGS)
 trdb_LDADD = $(TRDB_ALL_LINKER_LIBS)
 
-tests_SOURCES = trace_debugger.c utils.c serialize.c error.c disassembly.c test/tests.c
+tests_SOURCES = src/trace_debugger.c src/utils.c src/serialize.c \
+	src/error.c src/disassembly.c test/tests.c
 tests_LDFLAGS = $(TRDB_ALL_LINKER_FLAGS)
 tests_LDADD = $(TRDB_ALL_LINKER_LIBS)
 
 noinst_LIBRARIES = libtrdb.a
-libtrdb_a_SOURCES = trace_debugger.c utils.c serialize.c error.c disassembly.c
+libtrdb_a_SOURCES = src/trace_debugger.c src/utils.c src/serialize.c \
+	src/error.c src/disassembly.c
 
 AM_CFLAGS = -std=gnu11 -Wall -Wextra -Wno-missing-field-initializers -Wno-unused-function -Wno-missing-braces
 AM_CPPFLAGS = -D_GNU_SOURCE -I. -Iinclude -Iinternal -Ilib/include -Ilib/bfd
