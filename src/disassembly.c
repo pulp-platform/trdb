@@ -24,7 +24,6 @@
  * libbfd. Reuses and changes alot of code from GNU objdump.
  */
 
-#define PACKAGE "foo" /* quick hack for bfd if not using autotools */
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -38,6 +37,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include "config.h"
 #include "filenames.h"
 #include "disassembly.h"
 #include "disassembly_private.h"

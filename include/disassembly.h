@@ -30,7 +30,7 @@
 #include <inttypes.h>
 #include <stdbool.h>
 
-#define PACKAGE "foo" /* quick hack for bfd if not using autotools */
+#include "config.h"
 #include "bfd.h"
 #include "demangle.h"
 #include "dis-asm.h"
