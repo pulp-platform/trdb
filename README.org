@@ -35,35 +35,30 @@
    #+END_SRC
 
 ** Build
-   Run
+   To build =trdb=, =tests= and =libtrdb.a= call
 
    #+BEGIN_SRC bash
-   make all
+     autoreconf -vif
+     ./configure
+     make
    #+END_SRC
 
-   or
+   or if you want a debug build (debug symbols, asserts, address sanitizer, debug level logging, no
+   optimizations) use the helper script
 
    #+BEGIN_SRC bash
-   make debug
+   ./configure-debug
    #+END_SRC
 
-   for a release or debug build (debug symbols, asserts, address sanitizer, debug level logging, no
-   optimizations) of =trdb= respectively. You can find the tool
-   under =main/trdb=.
+   instead of =./configure=.
 
-   To build =libtrdb.so= call
-
-   #+BEGIN_SRC bash
-   make lib
-   #+END_SRC
-
-   =libtrdb= is a library for using the C-model, the decompression and
+   =libtrdb.a= is a library for using the C-model, the decompression and
    disassembly functionality.
 
    Run
 
    #+BEGIN_SRC bash
-   make docs
+   make doxygen-doc
    #+END_SRC
 
    to build the documentation with doxygen. It will be put under =doc/=.
@@ -139,7 +134,10 @@
    =trdb_free=.
 
 ** Tests
-   There are a few tests which can be run through =make test=.
+   Simply run
+   #+BEGIN_SRC bash
+     ./tests
+   #+END_SRC
 
 ** parse-opcodes
    The code in riscv_encoding.h was generated with [[https://github.com/pulp-platform/riscv-opcodes][riscv-opcodes]], a forked
