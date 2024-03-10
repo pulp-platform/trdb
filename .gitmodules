@@ -1,0 +1,3 @@
+[submodule "lib/riscv-binutils-gdb"]
+	path = lib/riscv-binutils-gdb
+	url = https://github.com/pulp-platform/riscv-binutils-gdb.git

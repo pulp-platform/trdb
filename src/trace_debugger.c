@@ -1333,7 +1333,7 @@ static int alloc_section_for_debugging(struct trdb_ctx *c, bfd *abfd,
     if (!dinfo || !section)
         return -trdb_invalid;
 
-    bfd_size_type section_size = bfd_get_section_size(section);
+    bfd_size_type section_size = bfd_section_size(section);
 
     bfd_byte *section_data = malloc(section_size);
     if (!section_data)
@@ -1412,7 +1412,7 @@ int trdb_decompress_trace(struct trdb_ctx *c, bfd *abfd,
     /* dunit.dinfo->stream = &instr; */
 
     /* Alloc and config section data for disassembler */
-    bfd_vma stop_offset = bfd_get_section_size(section) / dinfo.octets_per_byte;
+    bfd_vma stop_offset = bfd_section_size(section) / dinfo.octets_per_byte;
 
     if ((status = alloc_section_for_debugging(c, abfd, section, &dinfo)) < 0)
         goto fail;
@@ -1439,7 +1439,7 @@ int trdb_decompress_trace(struct trdb_ctx *c, bfd *abfd,
                 status = -trdb_bad_vma;
                 goto fail;
             }
-            stop_offset = bfd_get_section_size(section) / dinfo.octets_per_byte;
+            stop_offset = bfd_section_size(section) / dinfo.octets_per_byte;
 
             free_section_for_debugging(&dinfo);
             if ((status =
@@ -1506,7 +1506,7 @@ int trdb_decompress_trace(struct trdb_ctx *c, bfd *abfd,
                         goto fail;
                     }
                     stop_offset =
-                        bfd_get_section_size(section) / dinfo.octets_per_byte;
+                        bfd_section_size(section) / dinfo.octets_per_byte;
 
                     free_section_for_debugging(&dinfo);
                     if ((status = alloc_section_for_debugging(c, abfd, section,
@@ -1695,7 +1695,7 @@ int trdb_decompress_trace(struct trdb_ctx *c, bfd *abfd,
                         goto fail;
                     }
                     stop_offset =
-                        bfd_get_section_size(section) / dinfo.octets_per_byte;
+                        bfd_section_size(section) / dinfo.octets_per_byte;
 
                     free_section_for_debugging(&dinfo);
                     if ((status = alloc_section_for_debugging(c, abfd, section,
@@ -1865,7 +1865,7 @@ int trdb_decompress_trace(struct trdb_ctx *c, bfd *abfd,
                     goto fail;
                 }
                 stop_offset =
-                    bfd_get_section_size(section) / dinfo.octets_per_byte;
+                    bfd_section_size(section) / dinfo.octets_per_byte;
 
                 free_section_for_debugging(&dinfo);
                 if ((status = alloc_section_for_debugging(c, abfd, section,
@@ -1975,7 +1975,7 @@ int trdb_decompress_trace(struct trdb_ctx *c, bfd *abfd,
                         goto fail;
                     }
                     stop_offset =
-                        bfd_get_section_size(section) / dinfo.octets_per_byte;
+                        bfd_section_size(section) / dinfo.octets_per_byte;
 
                     free_section_for_debugging(&dinfo);
                     if ((status = alloc_section_for_debugging(c, abfd, section,

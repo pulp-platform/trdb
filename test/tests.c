@@ -112,7 +112,10 @@ static int test_disasm_bfd()
     /* set up disassembly context */
     struct disassembler_unit dunit = {0};
     dunit.dinfo                    = &dinfo;
-    dunit.disassemble_fn           = disassembler(abfd);
+    dunit.disassemble_fn           = disassembler(bfd_get_arch(abfd),
+                                                  bfd_big_endian(abfd),
+                                                  bfd_get_mach(abfd),
+                                                  abfd);
     if (!dunit.disassemble_fn) {
         LOG_ERRT("No suitable disassembler found\n");
         return TRDB_FAIL;

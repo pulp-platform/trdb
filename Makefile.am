@@ -1,9 +1,13 @@
 # SPDX-License-Identifier: Apache-2.0
+# Author: Robert Balas <balasr@iis.ee.ethz.ch>
+SUBDIRS = lib/riscv-binutils-gdb/bfd lib/riscv-binutils-gdb/opcodes lib/riscv-binutils-gdb/libiberty lib/riscv-binutils-gdb/zlib
+
 dist_doc_DATA = README.org
 bin_PROGRAMS = trdb
 noinst_PROGRAMS = tests benchmarks
 
-TRDB_ALL_LINKER_FLAGS = -Llib/opcodes -Llib/bfd -Llib/libiberty -Llib/zlib
+TRDB_LINKER_INCLUDES = -Ilib/riscv-binutils-gdb/include -Ilib/riscv-binutils-gdb/bfd
+TRDB_ALL_LINKER_FLAGS = -Llib/riscv-binutils-gdb/opcodes -Llib/riscv-binutils-gdb/bfd -Llib/riscv-binutils-gdb/libiberty -Llib/riscv-binutils-gdb/zlib
 TRDB_ALL_LINKER_LIBS= -lbfd -lopcodes -liberty -lz -ldl -lc
 
 trdb_SOURCES = src/trace_debugger.c src/utils.c src/serialize.c \
@@ -26,8 +30,8 @@ noinst_LIBRARIES = libtrdb.a
 libtrdb_a_SOURCES = src/trace_debugger.c src/utils.c src/serialize.c \
 	src/error.c src/disassembly.c
 
-AM_CFLAGS = -std=gnu11 -Wall -Wextra -Wno-missing-field-initializers -Wno-unused-function -Wno-missing-braces
-AM_CPPFLAGS = -D_GNU_SOURCE -I. -Iinclude -Iinternal -Ilib/include -Ilib/bfd
+AM_CFLAGS = -std=gnu11 -Wall -Wextra -Wno-missing-field-initializers -Wno-unused-function -Wno-missing-braces -fdiagnostics-color
+AM_CPPFLAGS = -D_GNU_SOURCE -I. -Iinclude -Iinternal $(TRDB_LINKER_INCLUDES)
 
 doxygen-doc: doxyfile
 	doxygen doxyfile

@@ -125,7 +125,8 @@ int trdb_init_disassembler_unit_for_pulp(struct disassembler_unit *dunit,
         return -trdb_invalid;
     trdb_init_disassemble_info_for_pulp(dinfo);
     dinfo->disassembler_options = options;
-    dunit->disassemble_fn       = print_insn_riscv;
+    dunit->disassemble_fn       = disassembler(bfd_arch_riscv, false,
+                                               bfd_mach_riscv32, NULL);
     return 0;
 }
 
@@ -156,7 +157,10 @@ int trdb_init_disassembler_unit(struct disassembler_unit *dunit, bfd *abfd,
         return -trdb_invalid;
 
     trdb_init_disassemble_info_from_bfd(dinfo, abfd, options);
-    dunit->disassemble_fn = disassembler(abfd);
+    dunit->disassemble_fn = disassembler(bfd_get_arch(abfd),
+                                         bfd_big_endian(abfd),
+                                         bfd_get_mach(abfd),
+                                         abfd);
     if (!dunit->disassemble_fn)
         return -trdb_arch_support;
 
@@ -382,7 +386,7 @@ static void trdb_print_symname(bfd *abfd, struct disassemble_info *inf,
     if ((sym->flags & BSF_SYNTHETIC) == 0)
         version_string = bfd_get_symbol_version_string(abfd, sym, &hidden);
 
-    if (bfd_is_und_section(bfd_get_section(sym)))
+    if (bfd_is_und_section(bfd_asymbol_section(sym)))
         hidden = TRUE;
 
     if (inf != NULL) {
@@ -554,9 +558,9 @@ find_symbol_for_address(bfd_vma vma, struct disassemble_info *inf, long *place)
      */
     want_section =
         (aux->require_sec || ((abfd->flags & HAS_RELOC) != 0 &&
-                              vma >= bfd_get_section_vma(abfd, sec) &&
-                              vma < (bfd_get_section_vma(abfd, sec) +
-                                     bfd_section_size(abfd, sec) / opb)));
+                              vma >= bfd_section_vma(sec) &&
+                              vma < (bfd_section_vma(sec) +
+                                     bfd_section_size(sec) / opb)));
     if ((sorted_syms[thisplace]->section != sec && want_section) ||
         !inf->symbol_is_valid(sorted_syms[thisplace], inf)) {
         long i;
@@ -653,8 +657,8 @@ static void trdb_print_addr_with_sym(bfd *abfd, asection *sec, asymbol *sym,
         bfd_vma secaddr;
 
         (*inf->fprintf_func)(inf->stream, " <%s",
-                             bfd_get_section_name(abfd, sec));
-        secaddr = bfd_get_section_vma(abfd, sec);
+                             bfd_section_name(sec));
+        secaddr = bfd_section_vma(sec);
         if (vma < secaddr) {
             (*inf->fprintf_func)(inf->stream, "-0x");
             trdb_print_value(secaddr - vma, inf, TRUE);
@@ -728,7 +732,7 @@ static void trdb_print_addr(bfd_vma vma, struct disassemble_info *inf,
         /* Adjust the vma to the reloc.  */
         vma += bfd_asymbol_value(sym);
 
-        if (bfd_is_und_section(bfd_get_section(sym)))
+        if (bfd_is_und_section(bfd_asymbol_section(sym)))
             skip_find = TRUE;
     }
 
@@ -869,7 +873,10 @@ int trdb_alloc_dinfo_with_bfd(struct trdb_ctx *c, bfd *abfd,
     }
 
     /* Use libopcodes to locate a suitable disassembler.  */
-    dunit->disassemble_fn = disassembler(abfd);
+    dunit->disassemble_fn = disassembler(bfd_get_arch(abfd),
+                                         bfd_big_endian(abfd),
+                                         bfd_get_mach(abfd),
+                                         abfd);
     if (!dunit->disassemble_fn) {
         err(c, "can't disassemble for architecture %s\n",
             bfd_printable_arch_mach(bfd_get_arch(abfd), 0));
@@ -881,7 +888,7 @@ int trdb_alloc_dinfo_with_bfd(struct trdb_ctx *c, bfd *abfd,
     dinfo->arch                      = bfd_get_arch(abfd);
     dinfo->mach                      = bfd_get_mach(abfd);
     dinfo->disassembler_options      = disassembler_options;
-    dinfo->octets_per_byte           = bfd_octets_per_byte(abfd);
+    dinfo->octets_per_byte           = bfd_octets_per_byte(abfd, NULL);
     dinfo->skip_zeroes               = DEFAULT_SKIP_ZEROES;
     dinfo->skip_zeroes_at_end        = DEFAULT_SKIP_ZEROES_AT_END;
     dinfo->disassembler_needs_relocs = FALSE;
@@ -1633,7 +1640,7 @@ void trdb_disassemble_instruction_with_bfd(struct trdb_ctx *c, bfd *abfd,
         return;
     }
 
-    datasize = bfd_get_section_size(section);
+    datasize = bfd_section_size(section);
     if (datasize == 0) {
         err(c, "section is empty\n");
         return;
@@ -1832,8 +1839,8 @@ void trdb_dump_section_names(bfd *abfd)
 void trdb_dump_section_header(bfd *abfd, asection *section, void *ignored)
 {
     (void)ignored;
-    bfd_printf_vma(abfd, bfd_get_section_vma(abfd, section));
-    printf("%s\n", bfd_get_section_name(abfd, section));
+    bfd_printf_vma(abfd, bfd_section_vma(section));
+    printf("%s\n", bfd_section_name(section));
 }
 
 void trdb_dump_bin_info(bfd *abfd)
@@ -1859,7 +1866,7 @@ bool trdb_vma_in_section(bfd *abfd, asection *section, bfd_vma vma)
 {
     (void)abfd; /* bfd_section_size ignores abfd */
     return (vma >= section->vma &&
-            vma < (section->vma + bfd_section_size(abfd, section)));
+            vma < (section->vma + bfd_section_size(section)));
 }
 
 asection *trdb_get_section_for_vma(bfd *abfd, bfd_vma vma)
@@ -1893,7 +1900,7 @@ void trdb_disassemble_section(bfd *abfd, asection *section, void *inf)
         return;
     }
 
-    bfd_size_type datasize = bfd_get_section_size(section);
+    bfd_size_type datasize = bfd_section_size(section);
     if (datasize == 0)
         return;
 
