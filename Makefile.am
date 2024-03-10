@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 dist_doc_DATA = README.org
 bin_PROGRAMS = trdb
-noinst_PROGRAMS = tests
+noinst_PROGRAMS = tests benchmarks
 
 TRDB_ALL_LINKER_FLAGS = -Llib/opcodes -Llib/bfd -Llib/libiberty -Llib/zlib
 TRDB_ALL_LINKER_LIBS= -lbfd -lopcodes -liberty -lz -ldl -lc
@@ -16,6 +16,11 @@ tests_SOURCES = src/trace_debugger.c src/utils.c src/serialize.c \
 	src/error.c src/disassembly.c test/tests.c
 tests_LDFLAGS = $(TRDB_ALL_LINKER_FLAGS)
 tests_LDADD = $(TRDB_ALL_LINKER_LIBS)
+
+benchmarks_SOURCES = src/trace_debugger.c src/utils.c src/serialize.c \
+	src/error.c src/disassembly.c benchmark/benchmarks.c
+benchmarks_LDFLAGS = $(TRDB_ALL_LINKER_FLAGS)
+benchmarks_LDADD = $(TRDB_ALL_LINKER_LIBS)
 
 noinst_LIBRARIES = libtrdb.a
 libtrdb_a_SOURCES = src/trace_debugger.c src/utils.c src/serialize.c \
