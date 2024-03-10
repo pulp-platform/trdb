@@ -31,7 +31,7 @@
 extern "C" {
 #endif
 
-#define PACKAGE "foo" /* quick hack for bfd if not using autotools */
+#include "config.h"
 #include <stdbool.h>
 #include <inttypes.h>
 #include <stdio.h>

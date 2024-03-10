@@ -1,6 +1,6 @@
 dnl SPDX-License-Identifier: Apache-2.0
 dnl Author: Robert Balas <balasr@iis.ee.ethz.ch>
-AC_INIT([trdb], [0.1], [balasr@iis.ee.ethz.ch])
+AC_INIT([trdb], [0.2], [balasr@iis.ee.ethz.ch])
 AM_INIT_AUTOMAKE([-Wall foreign subdir-objects])
 AC_PROG_CC
 AC_PROG_RANLIB

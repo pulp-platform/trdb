@@ -19,11 +19,10 @@
 
 /*
  * Author: Robert Balas (balasr@student.ethz.ch)
- * Description: trdb -- trace debugger tools for the  PULP platform, compress
+ * Description: trdb -- Trace Debugger Tools for RISC-V E-Trace, compress
  * and decompress instruction traces
  */
 
-#define PACKAGE "foo" /* quick hack for bfd if not using autotools */
 #include <stdio.h>
 #include <stdlib.h>
 #include <argp.h>
@@ -31,6 +30,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <sys/queue.h>
+#include "config.h"
 #include "bfd.h"
 #include "utils.h"
 #include "trace_debugger.h"
@@ -39,10 +39,10 @@
 
 #define TRDB_NUM_ARGS 1
 
-const char *argp_program_version     = "trdb 0.1";
-const char *argp_program_bug_address = "<balasr@student.ethz.ch>";
+const char *argp_program_version     = PACKAGE_STRING;
+const char *argp_program_bug_address = PACKAGE_BUGREPORT;
 
-static char doc[]      = "trdb -- trace debugger tools for the PULP platform";
+static char doc[]      = "trdb -- Trace Debugger Tools for RISC-V E-Trace";
 static char args_doc[] = "TRACE-OR-PACKETS";
 
 #define TRDB_OPT_DEMANGLE 1
