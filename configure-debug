@@ -1,2 +1,2 @@
 #!/usr/bin/bash
-./configure CFLAGS="-O0 -g -fno-strict-aliasing -DENABLE_LOGGING -DENABLE_DEBUG -fsanitize=address -fno-omit-frame-pointer -fsanitize=undefined -fsanitize=leak" CPPFLAGS="-D_FORTIFY_SOURCE=2"
+./configure CFLAGS="-Og -g -fno-strict-aliasing -DENABLE_LOGGING -DENABLE_DEBUG -fsanitize=address -fno-omit-frame-pointer -fsanitize=undefined -fsanitize=leak"
