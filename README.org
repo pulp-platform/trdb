@@ -133,6 +133,16 @@
    Remember to release the library context after you are finished with
    =trdb_free=.
 
+** Benchmarks
+   By default a benchmarking executable is built
+
+   Call
+   #+BEGIN_SRC bash
+     ./benchmarks
+   #+END_SRC
+
+   to run the built-in benchmarks.
+
 ** Tests
    Simply run
    #+BEGIN_SRC bash
