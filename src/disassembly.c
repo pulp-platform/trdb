@@ -125,8 +125,8 @@ int trdb_init_disassembler_unit_for_pulp(struct disassembler_unit *dunit,
         return -trdb_invalid;
     trdb_init_disassemble_info_for_pulp(dinfo);
     dinfo->disassembler_options = options;
-    dunit->disassemble_fn       = disassembler(bfd_arch_riscv, false,
-                                               bfd_mach_riscv32, NULL);
+    dunit->disassemble_fn =
+        disassembler(bfd_arch_riscv, false, bfd_mach_riscv32, NULL);
     return 0;
 }
 
@@ -157,10 +157,8 @@ int trdb_init_disassembler_unit(struct disassembler_unit *dunit, bfd *abfd,
         return -trdb_invalid;
 
     trdb_init_disassemble_info_from_bfd(dinfo, abfd, options);
-    dunit->disassemble_fn = disassembler(bfd_get_arch(abfd),
-                                         bfd_big_endian(abfd),
-                                         bfd_get_mach(abfd),
-                                         abfd);
+    dunit->disassemble_fn = disassembler(
+        bfd_get_arch(abfd), bfd_big_endian(abfd), bfd_get_mach(abfd), abfd);
     if (!dunit->disassemble_fn)
         return -trdb_arch_support;
 
@@ -557,10 +555,9 @@ find_symbol_for_address(bfd_vma vma, struct disassemble_info *inf, long *place)
      * the relocation table. Also give the target a chance to reject symbols.
      */
     want_section =
-        (aux->require_sec || ((abfd->flags & HAS_RELOC) != 0 &&
-                              vma >= bfd_section_vma(sec) &&
-                              vma < (bfd_section_vma(sec) +
-                                     bfd_section_size(sec) / opb)));
+        (aux->require_sec ||
+         ((abfd->flags & HAS_RELOC) != 0 && vma >= bfd_section_vma(sec) &&
+          vma < (bfd_section_vma(sec) + bfd_section_size(sec) / opb)));
     if ((sorted_syms[thisplace]->section != sec && want_section) ||
         !inf->symbol_is_valid(sorted_syms[thisplace], inf)) {
         long i;
@@ -656,8 +653,7 @@ static void trdb_print_addr_with_sym(bfd *abfd, asection *sec, asymbol *sym,
     if (sym == NULL) {
         bfd_vma secaddr;
 
-        (*inf->fprintf_func)(inf->stream, " <%s",
-                             bfd_section_name(sec));
+        (*inf->fprintf_func)(inf->stream, " <%s", bfd_section_name(sec));
         secaddr = bfd_section_vma(sec);
         if (vma < secaddr) {
             (*inf->fprintf_func)(inf->stream, "-0x");
@@ -873,10 +869,8 @@ int trdb_alloc_dinfo_with_bfd(struct trdb_ctx *c, bfd *abfd,
     }
 
     /* Use libopcodes to locate a suitable disassembler.  */
-    dunit->disassemble_fn = disassembler(bfd_get_arch(abfd),
-                                         bfd_big_endian(abfd),
-                                         bfd_get_mach(abfd),
-                                         abfd);
+    dunit->disassemble_fn = disassembler(
+        bfd_get_arch(abfd), bfd_big_endian(abfd), bfd_get_mach(abfd), abfd);
     if (!dunit->disassemble_fn) {
         err(c, "can't disassemble for architecture %s\n",
             bfd_printable_arch_mach(bfd_get_arch(abfd), 0));

@@ -1864,8 +1864,7 @@ int trdb_decompress_trace(struct trdb_ctx *c, bfd *abfd,
                     status = -trdb_bad_vma;
                     goto fail;
                 }
-                stop_offset =
-                    bfd_section_size(section) / dinfo.octets_per_byte;
+                stop_offset = bfd_section_size(section) / dinfo.octets_per_byte;
 
                 free_section_for_debugging(&dinfo);
                 if ((status = alloc_section_for_debugging(c, abfd, section,

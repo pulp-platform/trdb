@@ -15,6 +15,7 @@ config.h
 libtrdb.a
 tests
 trdb
+benchmarks
 
 
 Makefile.in

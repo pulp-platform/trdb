@@ -3,7 +3,6 @@ BasedOnStyle: LLVM
 IndentWidth: 4
 UseTab: Never
 BreakBeforeBraces: Linux
-AlwaysBreakBeforeMultilineStrings: true
 AllowShortIfStatementsOnASingleLine: false
 AllowShortLoopsOnASingleLine: false
 AllowShortFunctionsOnASingleLine: false
@@ -14,8 +13,6 @@ AlignOperands: true
 AllowAllParametersOfDeclarationOnNextLine: false
 AlignAfterOpenBracket: true
 SpaceAfterCStyleCast: false
-MaxEmptyLinesToKeep: 2
-BreakBeforeBinaryOperators: NonAssignment
 BreakStringLiterals: false
 SortIncludes: false
 ContinuationIndentWidth: 4
