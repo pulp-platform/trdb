@@ -112,10 +112,8 @@ static int test_disasm_bfd()
     /* set up disassembly context */
     struct disassembler_unit dunit = {0};
     dunit.dinfo                    = &dinfo;
-    dunit.disassemble_fn           = disassembler(bfd_get_arch(abfd),
-                                                  bfd_big_endian(abfd),
-                                                  bfd_get_mach(abfd),
-                                                  abfd);
+    dunit.disassemble_fn           = disassembler(
+        bfd_get_arch(abfd), bfd_big_endian(abfd), bfd_get_mach(abfd), abfd);
     if (!dunit.disassemble_fn) {
         LOG_ERRT("No suitable disassembler found\n");
         return TRDB_FAIL;
@@ -878,8 +876,9 @@ fail:
 }
 
 static int test_decompress_cvs_trace_differential(const char *bin_path,
-                                           const char *trace_path,
-                                           bool differential, bool implicit_ret)
+                                                  const char *trace_path,
+                                                  bool differential,
+                                                  bool implicit_ret)
 {
     bfd *abfd              = NULL;
     size_t instrcnt        = 0;
@@ -1001,8 +1000,9 @@ fail:
 }
 
 static int test_decompress_trace_differential(const char *bin_path,
-                                       const char *trace_path,
-                                       bool differential, bool implicit_ret)
+                                              const char *trace_path,
+                                              bool differential,
+                                              bool implicit_ret)
 {
     bfd *abfd                 = NULL;
     struct tr_instr *tmp      = NULL;
