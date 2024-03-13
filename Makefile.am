@@ -10,28 +10,42 @@ TRDB_LINKER_INCLUDES = -Ilib/riscv-binutils-gdb/include -Ilib/riscv-binutils-gdb
 TRDB_ALL_LINKER_FLAGS = -Llib/riscv-binutils-gdb/opcodes -Llib/riscv-binutils-gdb/bfd -Llib/riscv-binutils-gdb/libiberty -Llib/riscv-binutils-gdb/zlib
 TRDB_ALL_LINKER_LIBS= -lbfd -lopcodes -liberty -lz -ldl -lc
 
+# TRDB CLI tool
 trdb_SOURCES = src/trace_debugger.c src/utils.c src/serialize.c \
 	src/error.c src/disassembly.c src/trdb.c
 
 trdb_LDFLAGS = $(TRDB_ALL_LINKER_FLAGS)
 trdb_LDADD = $(TRDB_ALL_LINKER_LIBS)
 
+# Tests
 tests_SOURCES = src/trace_debugger.c src/utils.c src/serialize.c \
 	src/error.c src/disassembly.c test/tests.c
 tests_LDFLAGS = $(TRDB_ALL_LINKER_FLAGS)
 tests_LDADD = $(TRDB_ALL_LINKER_LIBS)
 
+# Benchmarks
 benchmarks_SOURCES = src/trace_debugger.c src/utils.c src/serialize.c \
 	src/error.c src/disassembly.c benchmark/benchmarks.c
 benchmarks_LDFLAGS = $(TRDB_ALL_LINKER_FLAGS)
 benchmarks_LDADD = $(TRDB_ALL_LINKER_LIBS)
 
-noinst_LIBRARIES = libtrdb.a
-libtrdb_a_SOURCES = src/trace_debugger.c src/utils.c src/serialize.c \
-	src/error.c src/disassembly.c
+# Dynamic library
+lib_LTLIBRARIES = libtrdb.la
+libtrdb_la_SOURCES = src/trace_debugger.c src/utils.c src/serialize.c \
+	src/error.c src/disassembly.c dpi/trdb_sv.c
+libtrdb_la_LDFLAGS = $(TRDB_ALL_LINKER_FLAGS)
+libtrdb_la_LIBADD  = $(TRDB_ALL_LINKER_LIBS)
+
+include_HEADERS = include/disassembly.h include/serialize.h include/trace_debugger.h
 
 AM_CFLAGS = -std=gnu11 -Wall -Wextra -Wno-missing-field-initializers -Wno-unused-function -Wno-missing-braces -fdiagnostics-color
 AM_CPPFLAGS = -D_GNU_SOURCE -I. -Iinclude -Iinternal $(TRDB_LINKER_INCLUDES)
+
+# workaround for shared source files
+# https://www.gnu.org/software/automake/manual/html_node/Objects-created-both-with-libtool-and-without.html
+trdb_CFLAGS = $(AM_CFLAGS)
+tests_CFLAGS = $(AM_CFLAGS)
+benchmarks_CFLAGS = $(AM_CFLAGS)
 
 doxygen-doc: doxyfile
 	doxygen doxyfile
