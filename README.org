@@ -9,6 +9,7 @@
    + decompress trace packets
    + disassemble traces
    + model a trace encoding source (processor interface to trace packets)
+   + used as part of a RTL testbench through DPI
 
    The =trdb= command line tool is used to provide a command line interface to
    =libtrdb= functionalities.
@@ -40,8 +41,8 @@
 
    instead of =./configure=.
 
-   =libtrdb.a= is a library for using the C-model, the decompression and
-   disassembly functionality.
+   =libtrdb.so= is a library for providing the C-model, decompression,
+   disassembly functionality and a simple interface using the SystemVerilog DPI.
 
    Run
 
