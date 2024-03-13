@@ -1,5 +1,7 @@
 *.o
 *.d
+*.lo
+*.la
 riscv-fesvr
 riscv-isa-sim-32
 riscv-isa-sim-64
@@ -26,6 +28,8 @@ Makefile.in
 /ylwrap
 .deps/
 .dirstamp
+.libs
+libtool
 
 autom4te.cache
 /autoscan.log

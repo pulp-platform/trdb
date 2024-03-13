@@ -26,8 +26,8 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <svdpi.h>
 #include <stdint.h>
+#include "svdpi.h"
 /* #include "autogen_trdb_sv.h" */
 #include "trdb_sv.h"
 #include "utils.h"
