@@ -23,6 +23,8 @@ tests_SOURCES = src/trace_debugger.c src/utils.c src/serialize.c \
 tests_LDFLAGS = $(TRDB_ALL_LINKER_FLAGS)
 tests_LDADD = $(TRDB_ALL_LINKER_LIBS)
 
+TESTS=tests
+LOG_DRIVER=./tests
 # Benchmarks
 benchmarks_SOURCES = src/trace_debugger.c src/utils.c src/serialize.c \
 	src/error.c src/disassembly.c benchmark/benchmarks.c
