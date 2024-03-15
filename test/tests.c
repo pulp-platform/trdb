@@ -35,15 +35,10 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include "trace_debugger.h"
-/* #include "trace_debugger.c" */
 #include "disassembly.h"
-/* #include "disassembly.c" */
 #include "utils.h"
-/* #include "utils.c" */
 #include "serialize.h"
 #include "workaround.h"
-/* #include "serialize.c" */
-/* #include "error.c" */
 
 #define TRDB_SUCCESS 0
 #define TRDB_FAIL -1
@@ -1244,8 +1239,8 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
         arguments->args[state->arg_num] = arg;
         break;
     case ARGP_KEY_END:
-	/* We allow passing no positional argument. This will just run the basic
-	 * tests */
+        /* We allow passing no positional argument. This will just run the basic
+         * tests */
         break;
     default:
         return ARGP_ERR_UNKNOWN;
@@ -1418,7 +1413,9 @@ int main(int argc, char *argv[argc + 1])
         if (access(stim, R_OK)) {
             LOG_ERRT("File not found, skipping test at %s\n", stim);
             if (trs_fp)
-                fprintf(trs_fp, ":test-result: SKIP test_compress_cvs_trace(%s)\n", stim);
+                fprintf(trs_fp,
+                        ":test-result: SKIP test_compress_cvs_trace(%s)\n",
+                        stim);
             continue;
         }
         RUN_TEST(test_compress_cvs_trace, stim);
@@ -1435,10 +1432,17 @@ int main(int argc, char *argv[argc + 1])
         if (access(bin, R_OK) || access(stim, R_OK)) {
             LOG_ERRT("File not found, skipping test at %s\n", bin);
             if (trs_fp) {
-                fprintf(trs_fp, ":test-result: SKIP test_compress_trace(%s)\n", bin);
-                fprintf(trs_fp, ":test-result: SKIP test_compress_trace_differential(%s, true, false)\n", bin);
-                fprintf(trs_fp, ":test-result: SKIP test_compress_trace_differential(%s, true, true)\n", bin);
-	    }
+                fprintf(trs_fp, ":test-result: SKIP test_compress_trace(%s)\n",
+                        bin);
+                fprintf(
+                    trs_fp,
+                    ":test-result: SKIP test_compress_trace_differential(%s, true, false)\n",
+                    bin);
+                fprintf(
+                    trs_fp,
+                    ":test-result: SKIP test_compress_trace_differential(%s, true, true)\n",
+                    bin);
+            }
             continue;
         }
         RUN_TEST(test_decompress_trace, bin, stim);
