@@ -20,7 +20,6 @@
 /**
  * @file trdb_private.h
  * @author Robert Balas (balasr@student.ethz.ch)
- * @date 16 Jan 2019
  * @brief Software model for the hardware trace debugger.
  */
 

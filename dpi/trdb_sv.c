@@ -20,7 +20,6 @@
 /**
  * @file trdb_sv.c
  * @author Robert Balas (balasr@student.ethz.ch)
- * @date 4 Sep 2018
  * @brief Interface for the system verilog testbench
  */
 

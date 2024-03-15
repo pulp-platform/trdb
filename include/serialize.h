@@ -20,7 +20,6 @@
 /**
  * @file serialize.h
  * @author Robert Balas (balasr@student.ethz.ch)
- * @date 25 Sep 2018
  * @brief Read binary data into packets
  */
 

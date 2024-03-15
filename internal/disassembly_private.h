@@ -20,7 +20,6 @@
 /**
  * @file disassembly_private.h
  * @author Robert Balas (balasr@student.ethz.ch)
- * @date 10 Nov 2018
  * @brief Disassembly helper function used internally
  */
 #include <stdint.h>

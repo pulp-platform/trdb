@@ -19,7 +19,6 @@
 /**
  * @file trdb_sv.h
  * @author Robert Balas (balasr@student.ethz.ch)
- * @date 15 Sep 2018
  * @brief Functions of the golden model which are called from the simulator
  */
 

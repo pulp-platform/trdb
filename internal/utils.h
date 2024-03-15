@@ -20,7 +20,6 @@
 /**
  * @file utils.h
  * @author Robert Balas (balasr@student.ethz.ch)
- * @date 25 Aug 2018
  * @brief Utility and logging functions/macros
  */
 

@@ -20,7 +20,6 @@
 /**
  * @file trace_debugger.h
  * @author Robert Balas (balasr@student.ethz.ch)
- * @date 24 Aug 2018
  * @brief Software model for the hardware trace debugger.
  */
 
