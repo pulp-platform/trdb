@@ -34,22 +34,18 @@
 #include <sys/queue.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <linux/limits.h>
 #include "trace_debugger.h"
-/* #include "trace_debugger.c" */
 #include "disassembly.h"
-/* #include "disassembly.c" */
 #include "utils.h"
-/* #include "utils.c" */
 #include "serialize.h"
 #include "workaround.h"
-/* #include "serialize.c" */
-/* #include "error.c" */
 
 #define TRDB_SUCCESS 0
 #define TRDB_FAIL -1
 
-FILE *log_fp = NULL;
 FILE *trs_fp = NULL;
+FILE *tee_fp = NULL;
 
 /* function args formatted as string */
 #define FUNC_ARGS_SIZE 256
@@ -1161,7 +1157,12 @@ static void mkdir_p(char *path)
     char *str;
     char *s;
 
-    s = path;
+    s = strdup(path);
+    if (!s) {
+        perror("strdup");
+        exit(EXIT_FAILURE);
+    }
+
     while ((str = strtok(s, "/")) != NULL) {
         if (str != s) {
             str[-1] = '/';
@@ -1179,11 +1180,32 @@ static void mkdir_p(char *path)
         }
         s = NULL;
     }
+
+    if (s)
+        free(s);
 }
 
 static bool is_valid_name(char *name)
 {
     return !(*name == '.' || *name == '/');
+}
+
+/* record skipped tests to log and trs */
+static void record_skipped(const char *restrict format, ...)
+{
+    va_list ap = {0};
+
+    va_start(ap, format);
+    printf("SKIP: ");
+    vprintf(format, ap);
+    va_end(ap);
+
+    if (trs_fp) {
+        va_start(ap, format);
+        fprintf(trs_fp, ":test-result: SKIP ");
+        vfprintf(trs_fp, format, ap);
+        va_end(ap);
+    }
 }
 
 #define TESTS_NUM_ARGS 1
@@ -1244,8 +1266,8 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
         arguments->args[state->arg_num] = arg;
         break;
     case ARGP_KEY_END:
-	/* We allow passing no positional argument. This will just run the basic
-	 * tests */
+        /* We allow passing no positional argument. This will just run the basic
+         * tests */
         break;
     default:
         return ARGP_ERR_UNKNOWN;
@@ -1354,18 +1376,26 @@ int main(int argc, char *argv[argc + 1])
         /* redirect stdout to logfile */
         char *bname = basename(arguments.logfile);
         if (is_valid_name(bname)) {
-            if ((log_fp = freopen(bname, "w+", stdout)) == NULL) {
-                perror("freopen");
+            /* spawn tee */
+            char teecmd[PATH_MAX];
+
+            snprintf(teecmd, sizeof(teecmd), "tee %s", arguments.logfile);
+
+            if ((tee_fp = popen(teecmd, "w")) == NULL) {
+                perror("popen");
                 exit(EXIT_FAILURE);
             }
-            /* stderr to stdout */
-            if (dup2(1, 2) == -1) {
+
+            /* redirect stdout to pipe */
+            if (dup2(fileno(tee_fp), fileno(stdout)) == -1) {
                 perror("dup2");
                 exit(EXIT_FAILURE);
             }
-            /* disable output buffering so that we can tail logs efficienctly as
+
+            /* enable line buffering so that we can tail logs efficienctly as
              * for redirect output buffers are not flushed on a newline */
-            setbuf(log_fp, NULL);
+            setlinebuf(tee_fp);
+            setlinebuf(stdout);
         }
     }
 
@@ -1382,9 +1412,9 @@ int main(int argc, char *argv[argc + 1])
                 perror("fopen");
                 exit(EXIT_FAILURE);
             }
-            /* disable output buffering so that we can tail logs efficienctly as
+            /* enable line buffering so that we can tail logs efficienctly as
              * for redirect output buffers are not flushed on a newline */
-            setbuf(trs_fp, NULL);
+            setlinebuf(trs_fp);
         }
     }
 
@@ -1416,9 +1446,7 @@ int main(int argc, char *argv[argc + 1])
     for (unsigned j = 0; j < TRDB_ARRAY_SIZE(tv_cvs); j++) {
         const char *stim = tv_cvs[j];
         if (access(stim, R_OK)) {
-            LOG_ERRT("File not found, skipping test at %s\n", stim);
-            if (trs_fp)
-                fprintf(trs_fp, ":test-result: SKIP test_compress_cvs_trace(%s)\n", stim);
+            record_skipped("test_compress_cvs_trace(%s)\n", stim);
             continue;
         }
         RUN_TEST(test_compress_cvs_trace, stim);
@@ -1433,12 +1461,11 @@ int main(int argc, char *argv[argc + 1])
         const char *bin  = tv[j];
         const char *stim = tv[j + 1];
         if (access(bin, R_OK) || access(stim, R_OK)) {
-            LOG_ERRT("File not found, skipping test at %s\n", bin);
-            if (trs_fp) {
-                fprintf(trs_fp, ":test-result: SKIP test_compress_trace(%s)\n", bin);
-                fprintf(trs_fp, ":test-result: SKIP test_compress_trace_differential(%s, true, false)\n", bin);
-                fprintf(trs_fp, ":test-result: SKIP test_compress_trace_differential(%s, true, true)\n", bin);
-	    }
+            record_skipped("test_compress_trace(%s)\n", bin);
+            record_skipped(
+                "test_compress_trace_differential(%s, true, false)\n", bin);
+            record_skipped("test_compress_trace_differential(%s, true, true)\n",
+                           bin);
             continue;
         }
         RUN_TEST(test_decompress_trace, bin, stim);
@@ -1458,7 +1485,12 @@ int main(int argc, char *argv[argc + 1])
         const char *stim = tv_gen_cvs[j + 1];
 #endif
         if (access(bin, R_OK) || access(stim, R_OK)) {
-            LOG_ERRT("File not found, skipping test at %s\n", bin);
+            record_skipped(
+                "test_decompress_cvs_trace_differential(%s, %s, true, false)\n",
+                bin, stim);
+            record_skipped(
+                "test_decompress_cvs_trace_differential(%s, %s, true, true)\n",
+                bin, stim);
             continue;
         }
         RUN_TEST(test_decompress_cvs_trace_differential, bin, stim, true,
@@ -1469,18 +1501,19 @@ int main(int argc, char *argv[argc + 1])
     if (TESTS_SUCCESSFULL()) {
         printf("ALL TESTS PASSED\n");
         if (trs_fp)
-            fprintf(trs_fp, ":test-global-result: PASS");
+            fprintf(trs_fp, ":test-global-result: PASS\n");
     } else {
         printf("AT LEAST ONE TEST FAILED\n");
         if (trs_fp)
-            fprintf(trs_fp, ":test-global-result: FAIL");
+            fprintf(trs_fp, ":test-global-result: FAIL\n");
     }
-
-    if (log_fp)
-        fclose(log_fp);
 
     if (trs_fp)
         fclose(trs_fp);
+
+    fflush(tee_fp);
+    /* we don't try to pclose(tee_fp) as tee just waits for more data from
+     * stdin resulting in getting blocked forever */
 
     return TESTS_SUCCESSFULL() ? EXIT_SUCCESS : EXIT_FAILURE;
 }
