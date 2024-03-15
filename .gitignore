@@ -2,6 +2,8 @@
 *.d
 *.lo
 *.la
+*.log
+*.trs
 riscv-fesvr
 riscv-isa-sim-32
 riscv-isa-sim-64
@@ -20,6 +22,7 @@ trdb
 benchmarks
 
 
+.Tpo
 Makefile.in
 /ar-lib
 /mdate-sh
