@@ -1,7 +1,7 @@
 /*
  * trdb - Debugger Software for the PULP platform
  *
- * Copyright (C) 2019 Robert Balas
+ * Copyright (C) 2024 Robert Balas
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,7 +20,6 @@
 /**
  * @file trdb_private.h
  * @author Robert Balas (balasr@student.ethz.ch)
- * @date 16 Jan 2019
  * @brief Software model for the hardware trace debugger.
  */
 
