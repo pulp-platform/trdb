@@ -103,7 +103,6 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
         arguments->silent = true;
         break;
     case 'o':
-        /* TODO: can I hold pointer to arg? */
         arguments->output_file = arg;
         break;
     case 'b':

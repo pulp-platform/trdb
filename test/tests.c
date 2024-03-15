@@ -29,7 +29,11 @@
 #include <errno.h>
 #include <unistd.h>
 #include <stdint.h>
+#include <argp.h>
+#include <libgen.h>
 #include <sys/queue.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include "trace_debugger.h"
 /* #include "trace_debugger.c" */
 #include "disassembly.h"
@@ -44,16 +48,36 @@
 #define TRDB_SUCCESS 0
 #define TRDB_FAIL -1
 
+FILE *log_fp = NULL;
+FILE *trs_fp = NULL;
+
+/* function args formatted as string */
+#define FUNC_ARGS_SIZE 256
+char func_args_buf[FUNC_ARGS_SIZE];
+
 #define INIT_TESTS() bool _trdb_test_result = true;
 
-/* TODO: and-ing of test results for main return value */
+void tprintf(const char *restrict format, ...)
+{
+    va_list args = {0};
+    va_start(args, format);
+    vfprintf(stdout, format, args);
+    va_end(args);
+}
+
 #define RUN_TEST(fun, ...)                                                     \
     do {                                                                       \
-        printf("Running %s: ", #fun);                                          \
+        memset(func_args_buf, 0, sizeof(func_args_buf));                       \
         if (!fun(__VA_ARGS__)) {                                               \
-            printf("success\n");                                               \
+            printf("PASS: " #fun "(%s)\n", func_args_buf);                     \
+            if (trs_fp)                                                        \
+                fprintf(trs_fp, ":test-result: PASS " #fun "(%s)\n",           \
+                        func_args_buf);                                        \
         } else {                                                               \
-            printf("fail\n");                                                  \
+            printf("FAIL: " #fun "(%s)\n", func_args_buf);                     \
+            if (trs_fp)                                                        \
+                fprintf(trs_fp, ":test-result: FAIL " #fun "(%s)\n",           \
+                        func_args_buf);                                        \
             _trdb_test_result = false;                                         \
         }                                                                      \
     } while (false)
@@ -361,7 +385,7 @@ static int test_parse_stimuli_line()
         perror("scanf");
         return TRDB_FAIL;
     } else {
-        fprintf(stderr, "No matching characters\n");
+        LOG_ERRT("No matching characters\n");
         return TRDB_FAIL;
     }
 
@@ -591,6 +615,9 @@ static int test_compress_trace(const char *trace_path, const char *packets_path)
     size_t samplecnt          = 0;
     int status                = TRDB_SUCCESS;
 
+    snprintf(func_args_buf, sizeof(func_args_buf), "%s, %s", trace_path,
+             packets_path);
+
     ctx = trdb_new();
     if (!ctx) {
         LOG_ERRT("Library context allocation failed.\n");
@@ -698,6 +725,8 @@ static int test_compress_cvs_trace(const char *trace_path)
     struct disassemble_info dinfo  = {0};
     dunit.dinfo                    = &dinfo;
 
+    snprintf(func_args_buf, sizeof(func_args_buf), "%s", trace_path);
+
     trdb_init_disassembler_unit_for_pulp(&dunit, NULL);
 
     struct trdb_packet_head packet_list;
@@ -739,7 +768,6 @@ static int test_compress_cvs_trace(const char *trace_path)
         }
     }
 
-    printf("path: %s\n", trace_path);
     if (TRDB_VERBOSE_TESTS) {
         printf("instructions: %zu, packets: %zu, payload bytes: %zu "
                "exceptions: %zu z/o: %zu\n",
@@ -773,6 +801,8 @@ static int test_decompress_trace(const char *bin_path, const char *trace_path)
     struct tr_instr **samples = &tmp;
     size_t samplecnt          = 0;
     int status                = TRDB_SUCCESS;
+
+    snprintf(func_args_buf, sizeof(func_args_buf), "%s", trace_path);
 
     struct trdb_ctx *ctx = trdb_new();
     if (!ctx) {
@@ -815,7 +845,7 @@ static int test_decompress_trace(const char *bin_path, const char *trace_path)
             goto fail;
         }
     }
-    printf("path: %s\n", bin_path);
+
     if (TRDB_VERBOSE_TESTS)
         printf("(Compression) Bits per instruction: %lf\n",
                ctx->stats.payloadbits / (double)ctx->stats.instrs);
@@ -898,8 +928,9 @@ static int test_decompress_cvs_trace_differential(const char *bin_path,
     struct trdb_instr_head instr1_head;
     TAILQ_INIT(&instr1_head);
 
-    printf("differential: %s, implicit returns: %s, ",
-           differential ? "true" : "false", implicit_ret ? "true" : "false");
+    snprintf(func_args_buf, sizeof(func_args_buf),
+             "%s, differential: %s, implicit returns: %s", bin_path,
+             differential ? "true" : "false", implicit_ret ? "true" : "false");
 
     bfd_init();
     abfd = bfd_openr(bin_path, NULL);
@@ -919,8 +950,6 @@ static int test_decompress_cvs_trace_differential(const char *bin_path,
     ctx->config.full_address  = !differential;
     ctx->config.use_pulp_sext = true;
     ctx->config.implicit_ret  = implicit_ret;
-
-    printf("path: %s\n", bin_path);
 
     TAILQ_FOREACH (instr, &instr_list, list) {
         int step = trdb_compress_trace_step_add(ctx, &packet_list, instr);
@@ -1017,8 +1046,9 @@ static int test_decompress_trace_differential(const char *bin_path,
         goto fail;
     }
 
-    printf("differential: %s, implicit returns: %s, ",
-           differential ? "true" : "false", implicit_ret ? "true" : "false");
+    snprintf(func_args_buf, sizeof(func_args_buf),
+             "%s, differential: %s, implicit returns: %s", trace_path,
+             differential ? "true" : "false", implicit_ret ? "true" : "false");
 
     bfd_init();
     abfd = bfd_openr(bin_path, NULL);
@@ -1054,7 +1084,6 @@ static int test_decompress_trace_differential(const char *bin_path,
             goto fail;
         }
     }
-    printf("path: %s\n", bin_path);
 
     if (TRDB_VERBOSE_TESTS) {
         printf("(Compression) Bits per instruction: %lf\n",
@@ -1125,7 +1154,108 @@ fail:
     return status;
 }
 
-int main()
+/* make any directory in path if it doesn't exist*/
+static void mkdir_p(char *path)
+{
+    struct stat stat_buf = {0};
+    char *str;
+    char *s;
+
+    s = path;
+    while ((str = strtok(s, "/")) != NULL) {
+        if (str != s) {
+            str[-1] = '/';
+        }
+        if (stat(path, &stat_buf) == -1) {
+            if (mkdir(path, 0777) == -1) {
+                perror("mkdir");
+                exit(EXIT_FAILURE);
+            }
+        } else {
+            if (!S_ISDIR(stat_buf.st_mode)) {
+                LOG_ERRT("could not create directory %s\n", path);
+                exit(EXIT_FAILURE);
+            }
+        }
+        s = NULL;
+    }
+}
+
+static bool is_valid_name(char *name)
+{
+    return !(*name == '.' || *name == '/');
+}
+
+#define TESTS_NUM_ARGS 1
+
+const char *argp_program_version     = "tests " PACKAGE_VERSION;
+const char *argp_program_bug_address = PACKAGE_BUGREPORT;
+static char doc[]                    = "tests -- Test driver for trdb tests";
+static char args_doc[]               = "TEST-NAME";
+
+static struct argp_option options[] = {
+    {"test-name", 'n', "NAME", 0, "The name of the test"},
+    {"log-file", 'l', "PATH", 0, "Log of stdout of the test"},
+    {"trs-file", 't', "PATH", 0, "Formatted result of test"},
+    {"color-tests", 'c', "{yes|no}", 0, "Colorize test console output"},
+    {"expect-failure", 'f', "{yes|no}", 0, "Whether test is expected to fail"},
+    {"enable-hard-errors", 'e', "{yes|no}", 0,
+     "Whether hard errors should be handled differently than normal errors"},
+    {"verbose", 'v', 0, 0, "Produce verbose output"},
+    {"quiet", 'q', 0, 0, "Don't produce any output"},
+    {0}};
+
+struct arguments {
+    char *args[TESTS_NUM_ARGS];
+    char *test_name;
+    char *logfile;
+    char *trsfile;
+    bool silent, verbose;
+};
+
+static error_t parse_opt(int key, char *arg, struct argp_state *state)
+{
+    struct arguments *arguments = state->input;
+    switch (key) {
+    case 'q':
+        arguments->silent = true;
+        break;
+    case 'v':
+        arguments->verbose = true;
+        break;
+    case 'n':
+        arguments->test_name = arg;
+        break;
+    case 'l':
+        arguments->logfile = arg;
+        break;
+    case 'c':
+        break;
+    case 'f':
+        break;
+    case 'e':
+        break;
+    case 't':
+        arguments->trsfile = arg;
+        break;
+    case ARGP_KEY_ARG:
+        if (state->arg_num >= TESTS_NUM_ARGS)
+            argp_usage(state);
+        arguments->args[state->arg_num] = arg;
+        break;
+    case ARGP_KEY_END:
+	/* We allow passing no positional argument. This will just run the basic
+	 * tests */
+        break;
+    default:
+        return ARGP_ERR_UNKNOWN;
+    }
+    return 0;
+}
+
+static struct argp argp = {options, parse_opt, args_doc, doc};
+
+int main(int argc, char *argv[argc + 1])
 {
     const char *tv[] = {
         "data/interrupt",
@@ -1212,6 +1342,52 @@ int main()
                                    "riscv-traces-64/vvadd.riscv.cvs"};
 #endif
 
+    struct arguments arguments = {0};
+    argp_parse(&argp, argc, argv, 0, 0, &arguments);
+
+    /* create directory structure to logfile */
+    if (arguments.logfile) {
+        char *dname = dirname(arguments.logfile);
+        if (is_valid_name(dname))
+            mkdir_p(dname);
+
+        /* redirect stdout to logfile */
+        char *bname = basename(arguments.logfile);
+        if (is_valid_name(bname)) {
+            if ((log_fp = freopen(bname, "w+", stdout)) == NULL) {
+                perror("freopen");
+                exit(EXIT_FAILURE);
+            }
+            /* stderr to stdout */
+            if (dup2(1, 2) == -1) {
+                perror("dup2");
+                exit(EXIT_FAILURE);
+            }
+            /* disable output buffering so that we can tail logs efficienctly as
+             * for redirect output buffers are not flushed on a newline */
+            setbuf(log_fp, NULL);
+        }
+    }
+
+    /* create directory structure to trsfile */
+    if (arguments.trsfile) {
+        char *dname = dirname(arguments.trsfile);
+        if (is_valid_name(dname))
+            mkdir_p(dname);
+
+        /* prepare trsfile */
+        char *bname = basename(arguments.trsfile);
+        if (is_valid_name(bname)) {
+            if ((trs_fp = fopen(bname, "w+")) == NULL) {
+                perror("fopen");
+                exit(EXIT_FAILURE);
+            }
+            /* disable output buffering so that we can tail logs efficienctly as
+             * for redirect output buffers are not flushed on a newline */
+            setbuf(trs_fp, NULL);
+        }
+    }
+
     /* const char *tv_cvs[] = {"data/cvs/pmp.spike_trace"}; */
     INIT_TESTS();
     /* for (size_t i = 0; i < 8; i++) */
@@ -1241,6 +1417,8 @@ int main()
         const char *stim = tv_cvs[j];
         if (access(stim, R_OK)) {
             LOG_ERRT("File not found, skipping test at %s\n", stim);
+            if (trs_fp)
+                fprintf(trs_fp, ":test-result: SKIP test_compress_cvs_trace(%s)\n", stim);
             continue;
         }
         RUN_TEST(test_compress_cvs_trace, stim);
@@ -1256,6 +1434,11 @@ int main()
         const char *stim = tv[j + 1];
         if (access(bin, R_OK) || access(stim, R_OK)) {
             LOG_ERRT("File not found, skipping test at %s\n", bin);
+            if (trs_fp) {
+                fprintf(trs_fp, ":test-result: SKIP test_compress_trace(%s)\n", bin);
+                fprintf(trs_fp, ":test-result: SKIP test_compress_trace_differential(%s, true, false)\n", bin);
+                fprintf(trs_fp, ":test-result: SKIP test_compress_trace_differential(%s, true, true)\n", bin);
+	    }
             continue;
         }
         RUN_TEST(test_decompress_trace, bin, stim);
@@ -1283,9 +1466,21 @@ int main()
         RUN_TEST(test_decompress_cvs_trace_differential, bin, stim, true, true);
     }
 
-    if (TESTS_SUCCESSFULL())
+    if (TESTS_SUCCESSFULL()) {
         printf("ALL TESTS PASSED\n");
-    else
+        if (trs_fp)
+            fprintf(trs_fp, ":test-global-result: PASS");
+    } else {
         printf("AT LEAST ONE TEST FAILED\n");
+        if (trs_fp)
+            fprintf(trs_fp, ":test-global-result: FAIL");
+    }
+
+    if (log_fp)
+        fclose(log_fp);
+
+    if (trs_fp)
+        fclose(trs_fp);
+
     return TESTS_SUCCESSFULL() ? EXIT_SUCCESS : EXIT_FAILURE;
 }
