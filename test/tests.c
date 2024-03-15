@@ -34,6 +34,7 @@
 #include <sys/queue.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <linux/limits.h>
 #include "trace_debugger.h"
 #include "disassembly.h"
 #include "utils.h"
@@ -43,8 +44,8 @@
 #define TRDB_SUCCESS 0
 #define TRDB_FAIL -1
 
-FILE *log_fp = NULL;
 FILE *trs_fp = NULL;
+FILE *tee_fp = NULL;
 
 /* function args formatted as string */
 #define FUNC_ARGS_SIZE 256
@@ -1156,7 +1157,12 @@ static void mkdir_p(char *path)
     char *str;
     char *s;
 
-    s = path;
+    s = strdup(path);
+    if (!s) {
+        perror("strdup");
+        exit(EXIT_FAILURE);
+    }
+
     while ((str = strtok(s, "/")) != NULL) {
         if (str != s) {
             str[-1] = '/';
@@ -1174,6 +1180,9 @@ static void mkdir_p(char *path)
         }
         s = NULL;
     }
+
+    if (s)
+        free(s);
 }
 
 static bool is_valid_name(char *name)
@@ -1349,18 +1358,26 @@ int main(int argc, char *argv[argc + 1])
         /* redirect stdout to logfile */
         char *bname = basename(arguments.logfile);
         if (is_valid_name(bname)) {
-            if ((log_fp = freopen(bname, "w+", stdout)) == NULL) {
-                perror("freopen");
+            /* spawn tee */
+            char teecmd[PATH_MAX];
+
+            snprintf(teecmd, sizeof(teecmd), "tee %s", arguments.logfile);
+
+            if ((tee_fp = popen(teecmd, "w")) == NULL) {
+                perror("popen");
                 exit(EXIT_FAILURE);
             }
-            /* stderr to stdout */
-            if (dup2(1, 2) == -1) {
+
+            /* redirect stdout to pipe */
+            if (dup2(fileno(tee_fp), fileno(stdout)) == -1) {
                 perror("dup2");
                 exit(EXIT_FAILURE);
             }
+
             /* enable line buffering so that we can tail logs efficienctly as
              * for redirect output buffers are not flushed on a newline */
-            setlinebuf(log_fp);
+            setlinebuf(tee_fp);
+            setlinebuf(stdout);
         }
     }
 
@@ -1480,11 +1497,12 @@ int main(int argc, char *argv[argc + 1])
             fprintf(trs_fp, ":test-global-result: FAIL\n");
     }
 
-    if (log_fp)
-        fclose(log_fp);
-
     if (trs_fp)
         fclose(trs_fp);
+
+    fflush(tee_fp);
+    /* we don't try to pclose(tee_fp) as tee just waits for more data from
+     * stdin resulting in getting blocked forever */
 
     return TESTS_SUCCESSFULL() ? EXIT_SUCCESS : EXIT_FAILURE;
 }
