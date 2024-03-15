@@ -1358,9 +1358,9 @@ int main(int argc, char *argv[argc + 1])
                 perror("dup2");
                 exit(EXIT_FAILURE);
             }
-            /* disable output buffering so that we can tail logs efficienctly as
+            /* enable line buffering so that we can tail logs efficienctly as
              * for redirect output buffers are not flushed on a newline */
-            setbuf(log_fp, NULL);
+            setlinebuf(log_fp);
         }
     }
 
@@ -1377,9 +1377,9 @@ int main(int argc, char *argv[argc + 1])
                 perror("fopen");
                 exit(EXIT_FAILURE);
             }
-            /* disable output buffering so that we can tail logs efficienctly as
+            /* enable line buffering so that we can tail logs efficienctly as
              * for redirect output buffers are not flushed on a newline */
-            setbuf(trs_fp, NULL);
+            setlinebuf(trs_fp);
         }
     }
 
