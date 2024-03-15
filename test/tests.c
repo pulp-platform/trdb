@@ -1190,6 +1190,24 @@ static bool is_valid_name(char *name)
     return !(*name == '.' || *name == '/');
 }
 
+/* record skipped tests to log and trs */
+static void record_skipped(const char *restrict format, ...)
+{
+    va_list ap = {0};
+
+    va_start(ap, format);
+    printf("SKIP: ");
+    vprintf(format, ap);
+    va_end(ap);
+
+    if (trs_fp) {
+        va_start(ap, format);
+        fprintf(trs_fp, ":test-result: SKIP ");
+        vfprintf(trs_fp, format, ap);
+        va_end(ap);
+    }
+}
+
 #define TESTS_NUM_ARGS 1
 
 const char *argp_program_version     = "tests " PACKAGE_VERSION;
@@ -1428,11 +1446,7 @@ int main(int argc, char *argv[argc + 1])
     for (unsigned j = 0; j < TRDB_ARRAY_SIZE(tv_cvs); j++) {
         const char *stim = tv_cvs[j];
         if (access(stim, R_OK)) {
-            LOG_ERRT("File not found, skipping test at %s\n", stim);
-            if (trs_fp)
-                fprintf(trs_fp,
-                        ":test-result: SKIP test_compress_cvs_trace(%s)\n",
-                        stim);
+            record_skipped("test_compress_cvs_trace(%s)\n", stim);
             continue;
         }
         RUN_TEST(test_compress_cvs_trace, stim);
@@ -1447,19 +1461,11 @@ int main(int argc, char *argv[argc + 1])
         const char *bin  = tv[j];
         const char *stim = tv[j + 1];
         if (access(bin, R_OK) || access(stim, R_OK)) {
-            LOG_ERRT("File not found, skipping test at %s\n", bin);
-            if (trs_fp) {
-                fprintf(trs_fp, ":test-result: SKIP test_compress_trace(%s)\n",
-                        bin);
-                fprintf(
-                    trs_fp,
-                    ":test-result: SKIP test_compress_trace_differential(%s, true, false)\n",
-                    bin);
-                fprintf(
-                    trs_fp,
-                    ":test-result: SKIP test_compress_trace_differential(%s, true, true)\n",
-                    bin);
-            }
+            record_skipped("test_compress_trace(%s)\n", bin);
+            record_skipped(
+                "test_compress_trace_differential(%s, true, false)\n", bin);
+            record_skipped("test_compress_trace_differential(%s, true, true)\n",
+                           bin);
             continue;
         }
         RUN_TEST(test_decompress_trace, bin, stim);
@@ -1479,7 +1485,12 @@ int main(int argc, char *argv[argc + 1])
         const char *stim = tv_gen_cvs[j + 1];
 #endif
         if (access(bin, R_OK) || access(stim, R_OK)) {
-            LOG_ERRT("File not found, skipping test at %s\n", bin);
+            record_skipped(
+                "test_decompress_cvs_trace_differential(%s, %s, true, false)\n",
+                bin, stim);
+            record_skipped(
+                "test_decompress_cvs_trace_differential(%s, %s, true, true)\n",
+                bin, stim);
             continue;
         }
         RUN_TEST(test_decompress_cvs_trace_differential, bin, stim, true,
