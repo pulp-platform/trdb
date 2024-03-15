@@ -1473,11 +1473,11 @@ int main(int argc, char *argv[argc + 1])
     if (TESTS_SUCCESSFULL()) {
         printf("ALL TESTS PASSED\n");
         if (trs_fp)
-            fprintf(trs_fp, ":test-global-result: PASS");
+            fprintf(trs_fp, ":test-global-result: PASS\n");
     } else {
         printf("AT LEAST ONE TEST FAILED\n");
         if (trs_fp)
-            fprintf(trs_fp, ":test-global-result: FAIL");
+            fprintf(trs_fp, ":test-global-result: FAIL\n");
     }
 
     if (log_fp)
