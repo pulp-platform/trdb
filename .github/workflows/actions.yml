@@ -22,4 +22,4 @@ jobs:
     - name: make
       run: make
     - name: make check
-      run: ./tests
+      run: make check
