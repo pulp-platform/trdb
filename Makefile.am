@@ -25,6 +25,7 @@ tests_LDADD = $(TRDB_ALL_LINKER_LIBS)
 
 TESTS=tests
 LOG_DRIVER=./tests
+
 # Benchmarks
 benchmarks_SOURCES = src/trace_debugger.c src/utils.c src/serialize.c \
 	src/error.c src/disassembly.c benchmark/benchmarks.c
@@ -40,8 +41,8 @@ libtrdb_la_LIBADD  = $(TRDB_ALL_LINKER_LIBS)
 
 include_HEADERS = include/disassembly.h include/serialize.h include/trace_debugger.h
 
-AM_CFLAGS = -std=gnu11 -Wall -Wextra -Wno-missing-field-initializers -Wno-unused-function -Wno-missing-braces -fdiagnostics-color
-AM_CPPFLAGS = -D_GNU_SOURCE -I. -Iinclude -Iinternal $(TRDB_LINKER_INCLUDES)
+AM_CFLAGS = -std=gnu11 -Wall -Wextra -Werror=format-security -Wno-missing-field-initializers -Wno-unused-function -Wno-missing-braces -fdiagnostics-color
+AM_CPPFLAGS = -D_GNU_SOURCE -Iinclude -Iinternal $(TRDB_LINKER_INCLUDES) -D_GLIBCXX_ASSERTIONS
 
 # workaround for shared source files
 # https://www.gnu.org/software/automake/manual/html_node/Objects-created-both-with-libtool-and-without.html
