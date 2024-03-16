@@ -1151,17 +1151,13 @@ fail:
 }
 
 /* make any directory in path if it doesn't exist*/
-static void mkdir_p(char *path)
+static int mkdir_p(char *path)
 {
     struct stat stat_buf = {0};
     char *str;
     char *s;
 
-    s = strdup(path);
-    if (!s) {
-        perror("strdup");
-        exit(EXIT_FAILURE);
-    }
+    s = path;
 
     while ((str = strtok(s, "/")) != NULL) {
         if (str != s) {
@@ -1170,22 +1166,26 @@ static void mkdir_p(char *path)
         if (stat(path, &stat_buf) == -1) {
             if (mkdir(path, 0777) == -1) {
                 perror("mkdir");
-                exit(EXIT_FAILURE);
+                return 1;
             }
         } else {
             if (!S_ISDIR(stat_buf.st_mode)) {
                 LOG_ERRT("could not create directory %s\n", path);
-                exit(EXIT_FAILURE);
+                return 1;
             }
         }
         s = NULL;
     }
 
-    if (s)
-        free(s);
+    return 0;
 }
 
-static bool is_valid_name(char *name)
+static bool is_valid_dir(const char *name)
+{
+    return *name != '/';
+}
+
+static bool is_valid_name(const char *name)
 {
     return !(*name == '.' || *name == '/');
 }
@@ -1369,53 +1369,109 @@ int main(int argc, char *argv[argc + 1])
 
     /* create directory structure to logfile */
     if (arguments.logfile) {
-        char *dname = dirname(arguments.logfile);
-        if (is_valid_name(dname))
-            mkdir_p(dname);
+        char *argdup = strdup(arguments.logfile);
+        if (!argdup) {
+            perror("strdup");
+            return EXIT_FAILURE;
+        }
+
+        char *dname = dirname(argdup);
+        if (!is_valid_dir(dname)) {
+            fprintf(stderr, "error: `%s' is not a valid path to a file name\n",
+                    arguments.logfile);
+            return EXIT_FAILURE;
+        }
+
+        if (mkdir_p(dname)) {
+            fprintf(stderr, "error: mkdir_p\n");
+            return EXIT_FAILURE;
+        }
+
+        free(argdup);
 
         /* redirect stdout to logfile */
-        char *bname = basename(arguments.logfile);
-        if (is_valid_name(bname)) {
-            /* spawn tee */
-            char teecmd[PATH_MAX];
-
-            snprintf(teecmd, sizeof(teecmd), "tee %s", arguments.logfile);
-
-            if ((tee_fp = popen(teecmd, "w")) == NULL) {
-                perror("popen");
-                exit(EXIT_FAILURE);
-            }
-
-            /* redirect stdout to pipe */
-            if (dup2(fileno(tee_fp), fileno(stdout)) == -1) {
-                perror("dup2");
-                exit(EXIT_FAILURE);
-            }
-
-            /* enable line buffering so that we can tail logs efficienctly as
-             * for redirect output buffers are not flushed on a newline */
-            setlinebuf(tee_fp);
-            setlinebuf(stdout);
+        argdup = strdup(arguments.logfile);
+        if (!argdup) {
+            perror("strdup");
+            return EXIT_FAILURE;
         }
+
+        char *bname = basename(argdup);
+        if (!is_valid_name(bname)) {
+            fprintf(stderr, "error: `%s' is not a valid path to a file name\n",
+                    arguments.logfile);
+            return EXIT_FAILURE;
+        }
+
+        /* spawn tee */
+        char teecmd[PATH_MAX];
+
+        snprintf(teecmd, sizeof(teecmd), "tee %s", arguments.logfile);
+
+        if ((tee_fp = popen(teecmd, "w")) == NULL) {
+            perror("popen");
+            return EXIT_FAILURE;
+        }
+
+        /* redirect stdout to pipe */
+        if (dup2(fileno(tee_fp), fileno(stdout)) == -1) {
+            perror("dup2");
+            return EXIT_FAILURE;
+        }
+
+        /* enable line buffering so that we can tail logs efficienctly as
+         * for redirect output buffers are not flushed on a newline */
+        setlinebuf(tee_fp);
+        setlinebuf(stdout);
+
+        free(argdup);
     }
 
     /* create directory structure to trsfile */
     if (arguments.trsfile) {
-        char *dname = dirname(arguments.trsfile);
-        if (is_valid_name(dname))
-            mkdir_p(dname);
+        char *argdup = strdup(arguments.trsfile);
+        if (!argdup) {
+            perror("strdup");
+            return EXIT_FAILURE;
+        }
+
+        char *dname = dirname(argdup);
+        if (!is_valid_dir(dname)) {
+            fprintf(stderr, "error: `%s' is not a valid path to a file name\n",
+                    arguments.trsfile);
+            return EXIT_FAILURE;
+        }
+
+        if (mkdir_p(dname)) {
+            fprintf(stderr, "error: mkdir_p\n");
+            return EXIT_FAILURE;
+        }
+
+        free(argdup);
 
         /* prepare trsfile */
-        char *bname = basename(arguments.trsfile);
-        if (is_valid_name(bname)) {
-            if ((trs_fp = fopen(bname, "w+")) == NULL) {
-                perror("fopen");
-                exit(EXIT_FAILURE);
-            }
-            /* enable line buffering so that we can tail logs efficienctly as
-             * for redirect output buffers are not flushed on a newline */
-            setlinebuf(trs_fp);
+        argdup = strdup(arguments.trsfile);
+        if (!argdup) {
+            perror("strdup");
+            return EXIT_FAILURE;
         }
+
+        char *bname = basename(argdup);
+        if (!is_valid_name(bname)) {
+            fprintf(stderr, "error: `%s' is not a valid path to a file name\n",
+                    arguments.trsfile);
+            return EXIT_FAILURE;
+        }
+
+        if ((trs_fp = fopen(bname, "w+")) == NULL) {
+            perror("fopen");
+            return EXIT_FAILURE;
+        }
+        /* enable line buffering so that we can tail logs efficienctly as
+         * for redirect output buffers are not flushed on a newline */
+        setlinebuf(trs_fp);
+
+        free(argdup);
     }
 
     /* const char *tv_cvs[] = {"data/cvs/pmp.spike_trace"}; */
