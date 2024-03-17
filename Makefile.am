@@ -35,7 +35,7 @@ benchmarks_LDADD = $(TRDB_ALL_LINKER_LIBS)
 # Dynamic library
 lib_LTLIBRARIES = libtrdb.la
 libtrdb_la_SOURCES = src/trace_debugger.c src/utils.c src/serialize.c \
-	src/error.c src/disassembly.c dpi/trdb_sv.c
+	src/error.c src/disassembly.c src/dpi/trdb_sv.c
 libtrdb_la_LDFLAGS = $(TRDB_ALL_LINKER_FLAGS)
 libtrdb_la_LIBADD  = $(TRDB_ALL_LINKER_LIBS)
 
