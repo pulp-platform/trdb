@@ -1318,11 +1318,14 @@ static void free_section_for_debugging(struct disassemble_info *dinfo)
 {
     if (!dinfo)
         return;
-    free(dinfo->buffer);
-    dinfo->buffer        = NULL;
-    dinfo->buffer_vma    = 0;
-    dinfo->buffer_length = 0;
-    dinfo->section       = NULL;
+
+    if (dinfo->buffer) {
+        free(dinfo->buffer);
+        dinfo->buffer        = NULL;
+        dinfo->buffer_vma    = 0;
+        dinfo->buffer_length = 0;
+        dinfo->section       = NULL;
+    }
 }
 
 /* Load the section given by @p section from @p abfd into @p dinfo. */
@@ -2063,10 +2066,16 @@ int trdb_decompress_trace(struct trdb_ctx *c, bfd *abfd,
         }
     }
     free_section_for_debugging(&dinfo);
+    if ((&dinfo)->private_data)
+        free((&dinfo)->private_data);
+
     return status;
 
 fail:
     free_section_for_debugging(&dinfo);
+    if ((&dinfo)->private_data)
+        free((&dinfo)->private_data);
+
     return status;
 }
 
